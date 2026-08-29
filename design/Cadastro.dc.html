@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #2E6FF2; text-decoration: underline; }
+    a:hover { color: #1B4FCB; }
+    .cd-btn-primary:hover { filter: brightness(0.92); }
+    .cd-btn-ghost:hover { background: #F2F4F7; }
+    .cd-input:focus, .cd-select:focus, .cd-textarea:focus { outline: none; border-color: #2E6FF2; box-shadow: 0 0 0 3px rgba(46,111,242,0.15); }
+    .cd-seg-btn:hover { background: #F2F4F7; }
+  </style>
+</helmet>
+
+<div style="min-height: 100vh; background: #FAFAF8; font-family: 'Public Sans', system-ui, sans-serif; color: #101828;">
+  <div style="max-width: 900px; margin: 0 auto; padding: 40px 32px 80px;">
+
+    <div style="display: flex; align-items: center; gap: 10px; padding-bottom: 24px; border-bottom: 1px solid #E4E7EC; margin-bottom: 28px;">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M8 12.5l2.5 2.5 5.5-6"></path>
+      </svg>
+      <span style="font-family: 'Sora', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.01em;">ContasEmDia</span>
+    </div>
+
+    <div style="margin-bottom: 28px;">
+      <h1 style="font-family: 'Sora', sans-serif; font-weight: 800; font-size: 24px; margin: 0;">Nova despesa recorrente</h1>
+      <p style="font-size: 14px; color: #667085; margin: 6px 0 0;">Cadastre uma conta que se repete todo mês. A ocorrência do mês atual é gerada automaticamente.</p>
+    </div>
+
+    <sc-if value="{{saved}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; align-items: flex-start; gap: 14px; background: #E7F6EF; border: 1px solid #B7E4CC; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#0F7B4E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;">
+          <circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5 5.5-6"></path>
+        </svg>
+        <div style="flex: 1;">
+          <div style="font-weight: 700; font-size: 15px; color: #0F7B4E;">"{{nome}}" cadastrada</div>
+          <div style="font-size: 13px; color: #2E5A45; margin-top: 4px;">A ocorrência de agosto já aparece no painel mensal, com status pendente. Os próximos meses serão gerados automaticamente.</div>
+          <button class="cd-btn-ghost" onClick="{{onNovaDespesa}}" style="margin-top: 12px; background: #FFFFFF; border: 1px solid #B7E4CC; color: #0F7B4E; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: 'Public Sans', sans-serif;">Cadastrar outra despesa</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap;">
+
+      <div style="flex: 1.4; min-width: 340px; display: flex; flex-direction: column; gap: 18px;">
+
+        <div>
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Nome</label>
+          <input class="cd-input" type="text" value="{{nome}}" onChange="{{onChangeNome}}" placeholder="Ex.: Aluguel" style="width: 100%; padding: 11px 12px; border: 1px solid #D0D5DD; border-radius: 8px; font-size: 14px; font-family: 'Public Sans', sans-serif; background: #FFFFFF;" />
+        </div>
+
+        <div style="display: flex; gap: 14px;">
+          <div style="flex: 1;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Categoria</label>
+            <select class="cd-select" value="{{categoria}}" onChange="{{onChangeCategoria}}" style="width: 100%; padding: 11px 12px; border: 1px solid #D0D5DD; border-radius: 8px; font-size: 14px; font-family: 'Public Sans', sans-serif; background: #FFFFFF;">
+              <option value="Moradia">Moradia</option>
+              <option value="Serviços">Serviços</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Assinaturas">Assinaturas</option>
+              <option value="Outra">Outra</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Valor previsto mensal</label>
+            <div style="display: flex; align-items: center; border: 1px solid #D0D5DD; border-radius: 8px; background: #FFFFFF; padding: 0 12px;">
+              <span style="font-size: 14px; color: #667085; margin-right: 6px;">R$</span>
+              <input class="cd-input" type="text" value="{{valor}}" onChange="{{onChangeValor}}" placeholder="0,00" style="flex: 1; width: 100%; padding: 11px 0; border: none; font-size: 14px; font-family: 'Public Sans', sans-serif; background: transparent;" />
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 14px;">
+          <div style="flex: 1;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Dia de vencimento</label>
+            <input class="cd-input" type="text" value="{{dia}}" onChange="{{onChangeDia}}" placeholder="Ex.: 10" style="width: 100%; padding: 11px 12px; border: 1px solid #D0D5DD; border-radius: 8px; font-size: 14px; font-family: 'Public Sans', sans-serif; background: #FFFFFF;" />
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Data de início</label>
+            <input class="cd-input" type="text" value="{{dataInicio}}" onChange="{{onChangeDataInicio}}" placeholder="dd/mm/aaaa" style="width: 100%; padding: 11px 12px; border: 1px solid #D0D5DD; border-radius: 8px; font-size: 14px; font-family: 'Public Sans', sans-serif; background: #FFFFFF;" />
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Frequência</label>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="padding: 8px 14px; border-radius: 8px; background: #EEF2FF; color: #3446C9; font-size: 13px; font-weight: 700;">Mensal</span>
+            <span style="font-size: 12px; color: #98A2B3;">Semanal, trimestral e anual — em breve</span>
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Status</label>
+          <div style="display: inline-flex; border: 1px solid #D0D5DD; border-radius: 8px; overflow: hidden;">
+            <sc-if value="{{isAtiva}}" hint-placeholder-val="{{true}}">
+              <button class="cd-seg-btn" onClick="{{onSetAtiva}}" style="padding: 9px 16px; border: none; background: {{accent}}; color: #FFFFFF; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Public Sans', sans-serif;">Ativa</button>
+            </sc-if>
+            <sc-if value="{{isPausada}}" hint-placeholder-val="{{false}}">
+              <button class="cd-seg-btn" onClick="{{onSetAtiva}}" style="padding: 9px 16px; border: none; background: #FFFFFF; color: #667085; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Public Sans', sans-serif;">Ativa</button>
+            </sc-if>
+            <sc-if value="{{isPausada}}" hint-placeholder-val="{{false}}">
+              <button class="cd-seg-btn" onClick="{{onSetPausada}}" style="padding: 9px 16px; border: none; border-left: 1px solid #D0D5DD; background: #EEF2F6; color: #475467; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Public Sans', sans-serif;">Pausada</button>
+            </sc-if>
+            <sc-if value="{{isAtiva}}" hint-placeholder-val="{{true}}">
+              <button class="cd-seg-btn" onClick="{{onSetPausada}}" style="padding: 9px 16px; border: none; border-left: 1px solid #D0D5DD; background: #FFFFFF; color: #667085; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Public Sans', sans-serif;">Pausada</button>
+            </sc-if>
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Observação <span style="font-weight: 400; color: #98A2B3;">(opcional)</span></label>
+          <textarea class="cd-textarea" onChange="{{onChangeObservacao}}" value="{{observacao}}" placeholder="Ex.: contrato nº 1234, pago no cartão final 4321" style="width: 100%; min-height: 80px; padding: 11px 12px; border: 1px solid #D0D5DD; border-radius: 8px; font-size: 14px; font-family: 'Public Sans', sans-serif; background: #FFFFFF; resize: vertical;"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 6px;">
+          <button class="cd-btn-primary" onClick="{{onSalvar}}" style="background: {{accent}}; color: #FFFFFF; border: none; border-radius: 8px; padding: 11px 20px; font-weight: 600; font-size: 14px; cursor: pointer; font-family: 'Public Sans', sans-serif;">Salvar despesa</button>
+          <button class="cd-btn-ghost" style="background: transparent; color: #667085; border: 1px solid #D0D5DD; border-radius: 8px; padding: 11px 20px; font-weight: 600; font-size: 14px; cursor: default; font-family: 'Public Sans', sans-serif;">Cancelar</button>
+        </div>
+      </div>
+
+      <div style="flex: 1; min-width: 280px; max-width: 340px;">
+        <div style="font-size: 12px; font-weight: 600; color: #667085; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px;">Pré-visualização</div>
+        <div style="background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 12px; padding: 18px;">
+          <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 12px;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: {{catColor}}; flex-shrink: 0;"></span>
+            <span style="font-weight: 700; font-size: 15px;">{{nomePreview}}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; color: #667085; margin-bottom: 8px;">
+            <span>{{categoria}}</span>
+            <span>{{diaLabel}}</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 1px solid #F0F1F3;">
+            <span style="font-family: 'Sora', sans-serif; font-weight: 700; font-size: 17px;">{{valorFmt}}</span>
+            <span style="padding: 5px 11px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #EEF2FF; color: #3446C9;">Pendente</span>
+          </div>
+          <div style="margin-top: 10px; font-size: 12px; color: #98A2B3;">{{statusHelperLabel}}</div>
+        </div>
+        <p style="font-size: 12px; color: #98A2B3; margin-top: 10px;">É assim que a conta vai aparecer na lista mensal.</p>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#2E6FF2","options":["#2E6FF2","#12406B","#0E9384","#7A5AF8"]}}'>
+function formatBRL(v) {
+  if (v == null || isNaN(v)) return 'R$ 0,00';
+  return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+var CATEGORY_COLORS = {
+  'Moradia': '#2E6FF2',
+  'Serviços': '#0E9384',
+  'Transporte': '#B8790A',
+  'Assinaturas': '#7A5AF8',
+  'Outra': '#667085'
+};
+
+class Component extends DCLogic {
+  state = {
+    nome: '',
+    categoria: 'Moradia',
+    valor: '',
+    dia: '',
+    dataInicio: '',
+    status: 'ativa',
+    observacao: '',
+    saved: false
+  };
+
+  onChangeNome = (e) => { this.setState({ nome: e.target.value }); };
+  onChangeCategoria = (e) => { this.setState({ categoria: e.target.value }); };
+  onChangeValor = (e) => { this.setState({ valor: e.target.value }); };
+  onChangeDia = (e) => { this.setState({ dia: e.target.value }); };
+  onChangeDataInicio = (e) => { this.setState({ dataInicio: e.target.value }); };
+  onChangeObservacao = (e) => { this.setState({ observacao: e.target.value }); };
+  onSetAtiva = () => { this.setState({ status: 'ativa' }); };
+  onSetPausada = () => { this.setState({ status: 'pausada' }); };
+
+  onSalvar = () => {
+    this.setState({ saved: true });
+  };
+
+  onNovaDespesa = () => {
+    this.setState({
+      nome: '', categoria: 'Moradia', valor: '', dia: '', dataInicio: '',
+      status: 'ativa', observacao: '', saved: false
+    });
+  };
+
+  renderVals() {
+    var s = this.state;
+    var valorNum = parseFloat(String(s.valor).replace(',', '.'));
+    var diaNum = parseInt(s.dia, 10);
+
+    return {
+      accent: this.props.accent ?? '#2E6FF2',
+      nome: s.nome,
+      categoria: s.categoria,
+      valor: s.valor,
+      dia: s.dia,
+      dataInicio: s.dataInicio,
+      observacao: s.observacao,
+      isAtiva: s.status === 'ativa',
+      isPausada: s.status === 'pausada',
+      saved: s.saved,
+      nomePreview: s.nome || 'Nome da despesa',
+      catColor: CATEGORY_COLORS[s.categoria] || '#667085',
+      valorFmt: formatBRL(isNaN(valorNum) ? 0 : valorNum),
+      diaLabel: s.dia && !isNaN(diaNum) ? ('Dia ' + diaNum) : 'Dia --',
+      statusHelperLabel: s.status === 'ativa' ? 'Gera ocorrências mensais automaticamente.' : 'Pausada — não gera novas ocorrências.',
+      onChangeNome: this.onChangeNome,
+      onChangeCategoria: this.onChangeCategoria,
+      onChangeValor: this.onChangeValor,
+      onChangeDia: this.onChangeDia,
+      onChangeDataInicio: this.onChangeDataInicio,
+      onChangeObservacao: this.onChangeObservacao,
+      onSetAtiva: this.onSetAtiva,
+      onSetPausada: this.onSetPausada,
+      onSalvar: this.onSalvar,
+      onNovaDespesa: this.onNovaDespesa
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,309 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #2E6FF2; text-decoration: underline; }
+    a:hover { color: #1B4FCB; }
+    .cd-btn-primary:hover { filter: brightness(0.92); }
+    .cd-btn-outline:hover { background: #F2F6FF; }
+    .cd-btn-ghost:hover { background: #F2F4F7; }
+    .cd-link:hover { opacity: 0.75; }
+    .cd-input:focus, .cd-select:focus { outline: none; border-color: #2E6FF2; box-shadow: 0 0 0 3px rgba(46,111,242,0.15); }
+  </style>
+</helmet>
+
+<div style="min-height: 100vh; background: #FAFAF8; font-family: 'Public Sans', system-ui, sans-serif; color: #101828;">
+  <div style="max-width: 1040px; margin: 0 auto; padding: 40px 32px 80px;">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid #E4E7EC; margin-bottom: 28px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M8 12.5l2.5 2.5 5.5-6"></path>
+        </svg>
+        <span style="font-family: 'Sora', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.01em;">ContasEmDia</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 4px; background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 10px; padding: 6px 8px;">
+          <button class="cd-btn-ghost" style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: transparent; border: none; border-radius: 6px; cursor: default; padding: 0;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+          </button>
+          <span style="font-family: 'Sora', sans-serif; font-weight: 600; font-size: 14px; padding: 0 6px; white-space: nowrap;">Agosto 2026</span>
+          <button class="cd-btn-ghost" style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: transparent; border: none; border-radius: 6px; cursor: default; padding: 0;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+          </button>
+        </div>
+        <button class="cd-btn-primary" style="display: flex; align-items: center; gap: 8px; background: {{accent}}; color: #FFFFFF; border: none; border-radius: 10px; padding: 10px 16px; font-weight: 600; font-size: 14px; cursor: default; font-family: 'Public Sans', sans-serif;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+          Nova despesa
+        </button>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap;">
+      <sc-if value="{{hasVencidas}}" hint-placeholder-val="{{true}}">
+        <div style="flex: 1; min-width: 240px; display: flex; align-items: center; gap: 12px; background: #FDECEA; border: 1px solid #F7C8C2; border-radius: 12px; padding: 16px;">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#C0362C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+            <path d="M10.3 3.9l-8 14A1.5 1.5 0 0 0 3.6 20h16.8a1.5 1.5 0 0 0 1.3-2.1l-8-14a1.5 1.5 0 0 0-2.6 0z"></path>
+            <path d="M12 9v4"></path><path d="M12 16.5v.01"></path>
+          </svg>
+          <div>
+            <div style="font-weight: 700; font-size: 14px; color: #7A2118;">{{vencidasCount}} conta(s) vencida(s)</div>
+            <div style="font-size: 13px; color: #9B4A3F; margin-top: 2px;">Regularize o quanto antes.</div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{hasVenceEmBreve}}" hint-placeholder-val="{{true}}">
+        <div style="flex: 1; min-width: 240px; display: flex; align-items: center; gap: 12px; background: #FFF6E5; border: 1px solid #F5DDA0; border-radius: 12px; padding: 16px;">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#9A6300" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+            <circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path>
+          </svg>
+          <div>
+            <div style="font-weight: 700; font-size: 14px; color: #6B4A00;">{{venceEmBreveCount}} conta(s) vencendo em 7 dias</div>
+            <div style="font-size: 13px; color: #8A6100; margin-top: 2px;">Total a vencer no período: {{totalAVencerFmt}}</div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 32px;">
+      <div style="background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 14px; padding: 20px;">
+        <div style="font-size: 12px; font-weight: 600; color: #667085; text-transform: uppercase; letter-spacing: 0.04em;">Total previsto no mês</div>
+        <div style="font-family: 'Sora', sans-serif; font-weight: 800; font-size: 26px; margin-top: 8px;">{{totalPrevistoFmt}}</div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 14px; padding: 20px;">
+        <div style="font-size: 12px; font-weight: 600; color: #667085; text-transform: uppercase; letter-spacing: 0.04em;">Total pago</div>
+        <div style="font-family: 'Sora', sans-serif; font-weight: 800; font-size: 26px; margin-top: 8px; color: #0F7B4E;">{{totalPagoFmt}}</div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 14px; padding: 20px;">
+        <div style="font-size: 12px; font-weight: 600; color: #667085; text-transform: uppercase; letter-spacing: 0.04em;">Total pendente</div>
+        <div style="font-family: 'Sora', sans-serif; font-weight: 800; font-size: 26px; margin-top: 8px;">{{totalPendenteFmt}}</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">
+      <h2 style="font-family: 'Sora', sans-serif; font-weight: 700; font-size: 18px; margin: 0;">Contas de Agosto 2026</h2>
+      <span style="font-size: 13px; color: #667085;">{{itemCount}} contas</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <sc-for list="{{items}}" as="it" hint-placeholder-count="4">
+        <div style="background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+
+          <div style="flex: 1; min-width: 180px; display: flex; align-items: center; gap: 7px;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: {{it.catColor}}; flex-shrink: 0;"></span>
+            <span style="font-weight: 700; font-size: 15px;">{{it.nome}}</span>
+            <span style="font-size: 13px; color: #667085;">· {{it.categoria}}</span>
+          </div>
+
+          <div style="width: 110px; text-align: right; font-family: 'Sora', sans-serif; font-weight: 700; font-size: 15px;">{{it.valorPrevistoFmt}}</div>
+
+          <div style="width: 70px; text-align: center; font-size: 13px; color: #667085;">{{it.diaLabel}}</div>
+
+          <div style="width: 150px; display: flex; justify-content: center;">
+            <span style="padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; background: {{it.statusBg}}; color: {{it.statusColor}};">{{it.statusLabel}}</span>
+          </div>
+
+          <div style="width: 210px; display: flex; justify-content: flex-end;">
+            <sc-if value="{{it.isNotEditing}}" hint-placeholder-val="{{true}}">
+              <sc-if value="{{it.notPaid}}" hint-placeholder-val="{{true}}">
+                <button class="cd-btn-outline" onClick="{{it.onIniciar}}" style="background: #FFFFFF; border: 1.5px solid {{accent}}; color: {{accent}}; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: 'Public Sans', sans-serif; white-space: nowrap;">Marcar como paga</button>
+              </sc-if>
+              <sc-if value="{{it.paid}}" hint-placeholder-val="{{false}}">
+                <div style="text-align: right;">
+                  <sc-if value="{{it.valorDiferente}}" hint-placeholder-val="{{false}}">
+                    <div style="font-weight: 700; font-size: 14px; color: #9A6300;">{{it.valorPagoFmt}}</div>
+                    <div style="font-size: 11px; color: #9A6300;">diferente do previsto</div>
+                  </sc-if>
+                  <sc-if value="{{it.notDiferente}}" hint-placeholder-val="{{true}}">
+                    <div style="font-weight: 700; font-size: 14px; color: #0F7B4E;">{{it.valorPagoFmt}}</div>
+                  </sc-if>
+                  <div style="font-size: 12px; color: #667085; margin-top: 2px;">pago em {{it.dataPagamentoLabel}}</div>
+                  <span class="cd-link" onClick="{{it.onDesfazer}}" style="font-size: 12px; color: {{accent}}; text-decoration: underline; cursor: pointer; display: inline-block; margin-top: 4px;">Desfazer</span>
+                </div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{it.isEditing}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; width: 190px;">
+                <div style="display: flex; align-items: center; gap: 6px; width: 100%;">
+                  <span style="font-size: 12px; color: #667085;">R$</span>
+                  <input class="cd-input" type="text" value="{{it.draftValor}}" onChange="{{onChangeValor}}" style="flex: 1; padding: 6px 8px; border: 1px solid #D0D5DD; border-radius: 6px; font-size: 13px; font-family: 'Public Sans', sans-serif;" />
+                </div>
+                <input class="cd-input" type="text" value="{{it.draftData}}" onChange="{{onChangeData}}" placeholder="dd/mm/aaaa" style="width: 100%; padding: 6px 8px; border: 1px solid #D0D5DD; border-radius: 6px; font-size: 13px; font-family: 'Public Sans', sans-serif;" />
+                <div style="display: flex; gap: 8px;">
+                  <button class="cd-btn-primary" onClick="{{it.onConfirmar}}" style="background: {{accent}}; color: #FFFFFF; border: none; border-radius: 6px; padding: 7px 12px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: 'Public Sans', sans-serif;">Confirmar</button>
+                  <button class="cd-btn-ghost" onClick="{{it.onCancelarItem}}" style="background: transparent; color: #667085; border: none; border-radius: 6px; padding: 7px 8px; font-size: 13px; cursor: pointer; font-family: 'Public Sans', sans-serif;">Cancelar</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+        </div>
+      </sc-for>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#2E6FF2","options":["#2E6FF2","#12406B","#0E9384","#7A5AF8"]}}'>
+function formatBRL(v) {
+  if (v == null || isNaN(v)) return 'R$ 0,00';
+  return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+var CATEGORY_COLORS = {
+  'Moradia': '#2E6FF2',
+  'Serviços': '#0E9384',
+  'Transporte': '#B8790A',
+  'Assinaturas': '#7A5AF8',
+  'Outra': '#667085'
+};
+
+var HOJE_DEMO = 18;
+
+class Component extends DCLogic {
+  state = {
+    editingId: null,
+    draftValor: '',
+    draftData: '',
+    occurrences: [
+      { id: 1, nome: 'Aluguel', categoria: 'Moradia', valorPrevisto: 1500.00, dia: 10, paid: false, valorPago: null, dataPagamento: null },
+      { id: 2, nome: 'Água', categoria: 'Serviços', valorPrevisto: 92.40, dia: 15, paid: false, valorPago: null, dataPagamento: null },
+      { id: 3, nome: 'Internet', categoria: 'Serviços', valorPrevisto: 119.90, dia: 5, paid: true, valorPago: 119.90, dataPagamento: '04/08/2026' },
+      { id: 4, nome: 'Energia', categoria: 'Serviços', valorPrevisto: 214.30, dia: 20, paid: false, valorPago: null, dataPagamento: null },
+      { id: 5, nome: 'Netflix', categoria: 'Assinaturas', valorPrevisto: 55.90, dia: 8, paid: true, valorPago: 59.90, dataPagamento: '08/08/2026' },
+      { id: 6, nome: 'Academia', categoria: 'Outra', valorPrevisto: 129.00, dia: 25, paid: false, valorPago: null, dataPagamento: null },
+      { id: 7, nome: 'Seguro do Carro', categoria: 'Transporte', valorPrevisto: 340.00, dia: 12, paid: false, valorPago: null, dataPagamento: null },
+      { id: 8, nome: 'Spotify Família', categoria: 'Assinaturas', valorPrevisto: 34.90, dia: 30, paid: false, valorPago: null, dataPagamento: null }
+    ]
+  };
+
+  iniciarPagamento = (id) => {
+    var o = this.state.occurrences.find(function (x) { return x.id === id; });
+    this.setState({
+      editingId: id,
+      draftValor: o.valorPrevisto.toFixed(2).replace('.', ','),
+      draftData: '18/08/2026'
+    });
+  };
+
+  cancelarEdicao = () => {
+    this.setState({ editingId: null });
+  };
+
+  onChangeValor = (e) => {
+    this.setState({ draftValor: e.target.value });
+  };
+
+  onChangeData = (e) => {
+    this.setState({ draftData: e.target.value });
+  };
+
+  confirmarPagamento = (id) => {
+    var draftValor = this.state.draftValor;
+    var draftData = this.state.draftData;
+    var parsed = parseFloat(String(draftValor).replace(',', '.'));
+    this.setState({
+      editingId: null,
+      occurrences: this.state.occurrences.map(function (o) {
+        if (o.id !== id) return o;
+        var valorFinal = isNaN(parsed) ? o.valorPrevisto : parsed;
+        return Object.assign({}, o, { paid: true, valorPago: valorFinal, dataPagamento: draftData || '18/08/2026' });
+      })
+    });
+  };
+
+  desfazerPagamento = (id) => {
+    this.setState({
+      occurrences: this.state.occurrences.map(function (o) {
+        return o.id === id ? Object.assign({}, o, { paid: false, valorPago: null, dataPagamento: null }) : o;
+      })
+    });
+  };
+
+  renderVals() {
+    var self = this;
+    var hoje = HOJE_DEMO;
+    var occ = this.state.occurrences;
+    var totalPrevisto = 0, totalPago = 0, totalPendente = 0, vencidasCount = 0, venceEmBreveCount = 0, totalAVencer = 0;
+
+    occ.forEach(function (o) {
+      totalPrevisto += o.valorPrevisto;
+      if (o.paid) {
+        totalPago += o.valorPago;
+      } else {
+        totalPendente += o.valorPrevisto;
+        if (o.dia < hoje) vencidasCount++;
+        else if (o.dia - hoje <= 7) { venceEmBreveCount++; totalAVencer += o.valorPrevisto; }
+      }
+    });
+
+    var statusMeta = {
+      paga: { label: 'Paga', bg: '#E7F6EF', color: '#0F7B4E' },
+      vencida: { label: 'Vencida', bg: '#FDECEA', color: '#C0362C' },
+      vence_em_breve: { label: 'Vence em breve', bg: '#FFF6E5', color: '#9A6300' },
+      pendente: { label: 'Pendente', bg: '#EEF2FF', color: '#3446C9' }
+    };
+
+    var items = occ.map(function (o) {
+      var status = o.paid ? 'paga' : (o.dia < hoje ? 'vencida' : (o.dia - hoje <= 7 ? 'vence_em_breve' : 'pendente'));
+      var meta = statusMeta[status];
+      var isEditing = self.state.editingId === o.id;
+      var valorDiferente = o.paid && o.valorPago != null && Math.abs(o.valorPago - o.valorPrevisto) > 0.001;
+
+      return {
+        id: o.id,
+        nome: o.nome,
+        categoria: o.categoria,
+        catColor: CATEGORY_COLORS[o.categoria] || '#667085',
+        diaLabel: 'Dia ' + o.dia,
+        valorPrevistoFmt: formatBRL(o.valorPrevisto),
+        statusLabel: meta.label,
+        statusBg: meta.bg,
+        statusColor: meta.color,
+        paid: o.paid,
+        notPaid: !o.paid,
+        isEditing: isEditing,
+        isNotEditing: !isEditing,
+        valorPagoFmt: o.paid ? formatBRL(o.valorPago) : '',
+        dataPagamentoLabel: o.paid ? o.dataPagamento : '',
+        valorDiferente: valorDiferente,
+        notDiferente: !valorDiferente,
+        draftValor: isEditing ? self.state.draftValor : '',
+        draftData: isEditing ? self.state.draftData : '',
+        onIniciar: function () { self.iniciarPagamento(o.id); },
+        onConfirmar: function () { self.confirmarPagamento(o.id); },
+        onCancelarItem: function () { self.cancelarEdicao(); },
+        onDesfazer: function () { self.desfazerPagamento(o.id); }
+      };
+    });
+
+    return {
+      accent: this.props.accent ?? '#2E6FF2',
+      items: items,
+      itemCount: items.length,
+      totalPrevistoFmt: formatBRL(totalPrevisto),
+      totalPagoFmt: formatBRL(totalPago),
+      totalPendenteFmt: formatBRL(totalPendente),
+      hasVencidas: vencidasCount > 0,
+      vencidasCount: vencidasCount,
+      hasVenceEmBreve: venceEmBreveCount > 0,
+      venceEmBreveCount: venceEmBreveCount,
+      totalAVencerFmt: formatBRL(totalAVencer),
+      onChangeValor: this.onChangeValor,
+      onChangeData: this.onChangeData
+    };
+  }
+}
+</script>
+</body>
+</html>

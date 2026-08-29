@@ -1,0 +1,7 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1200, "h": 1500, "title": "Painel mensal", "expand": "fill", "is_interactive": true },
+    { "file": "Cadastro.dc.html", "x": 1320, "y": 0, "w": 940, "h": 1350, "title": "Nova despesa", "expand": "fill", "is_interactive": true }
+  ],
+  "launch": { "view": "canvas" }
+}
