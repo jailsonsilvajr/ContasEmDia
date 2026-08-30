@@ -1,25 +1,19 @@
 <!--
 Sync Impact Report
 ==================
-Version change: (none, template) → 1.0.0
-Rationale: Initial ratification of the project constitution. No prior concrete
-version existed (file only contained unfilled template placeholders).
+Version change: 1.0.0 → 1.1.0
+Rationale: MINOR bump — a new Core Principle (VI. Domain-Driven Design in the
+Domain Layer) was added with material, non-negotiable rules for the backend
+Domain project. No existing principle was removed or redefined incompatibly.
 
-Modified principles: N/A (initial adoption)
+Modified principles: N/A
 
 Added sections:
-- Core Principles: I. API-First Backend/Frontend Separation, II. Test-First
-  Development, III. Type Safety & Static Analysis, IV. Secure Handling of
-  Financial Data, V. Simplicity & Incremental Delivery
-- Technology Stack Requirements
-- Development Workflow & Quality Gates
-- Governance
+- Core Principles: VI. Domain-Driven Design in the Domain Layer
 
-Removed sections: N/A (initial adoption)
+Removed sections: N/A
 
-Deferred / TODO placeholders: None. RATIFICATION_DATE set to the date this
-constitution was first adopted (today), since no earlier ratified version
-exists.
+Deferred / TODO placeholders: None.
 
 Templates requiring follow-up review (not modified by this command, listed
 for awareness only): .specify/templates/plan-template.md,
@@ -86,6 +80,43 @@ over large, multi-purpose changes.
 Rationale: A small full-stack project benefits more from clarity and low
 maintenance overhead than from speculative flexibility.
 
+### VI. Domain-Driven Design in the Domain Layer
+The backend Domain project MUST model the business domain using DDD tactical
+patterns — Aggregates, Entities, Value Objects, and Repository interfaces —
+under the following non-negotiable rules:
+- Each building block type MUST live in its own dedicated top-level folder in
+  the Domain project: `/Aggregates`, `/Entities`, `/ValueObjects`,
+  `/Repositories`.
+- Repository interfaces MUST be defined only for Aggregates. Entities and
+  Value Objects MUST NOT have their own repository; they are reachable only
+  through the Aggregate that owns them.
+- Aggregates and Entities MUST NOT expose primitive-typed properties (e.g.,
+  `int`, `string`, `bool`, `decimal`, `DateTime`). Every property that carries
+  domain meaning MUST be represented as a Value Object.
+- Aggregates, Entities, and Value Objects MUST be created only through their
+  constructors. Parameterless construction, public setters used for
+  initialization, or object-initializer-based creation that bypasses
+  constructor validation MUST NOT be used.
+- The identifier of every Aggregate and every Entity MUST be a GUID.
+- Properties of Aggregates, Entities, and Value Objects MUST NOT be exposed as
+  directly gettable/settable state. All reads and mutations MUST go through
+  business-intent methods (e.g., an Account Aggregate MUST NOT expose a
+  `Balance` property, but MUST expose methods such as `CalculateBalance()`,
+  `Debit()`, and `Credit()`).
+- Value Objects MUST be immutable: no internal state may change after
+  construction. Every Value Object MUST provide a `GetValue()` method to read
+  its underlying value.
+- Validation of Aggregate, Entity, and Value Object invariants MUST be
+  implemented by hand inside constructors and business methods. Validation
+  libraries such as FluentValidation MUST NOT be used in the Domain layer.
+- The Domain layer MUST NOT implement Domain Events. Cross-aggregate or
+  cross-context notification mechanisms are out of scope until a future
+  amendment explicitly authorizes them.
+Rationale: These constraints keep business rules encapsulated inside a rich
+domain model instead of leaking into services or persistence code, and keep
+the Domain project's structure predictable and consistent as more Aggregates,
+Entities, and Value Objects are added.
+
 ## Technology Stack Requirements
 
 - Backend: .NET 10 (C#). New backend projects/services MUST target .NET 10
@@ -109,7 +140,7 @@ maintenance overhead than from speculative flexibility.
   linters/analyzers on every pull request; a red build blocks merge.
 - Breaking API changes MUST be called out explicitly in the pull request
   description, including the migration path for frontend consumers.
-- Constitution compliance (Principles I–V) MUST be considered part of
+- Constitution compliance (Principles I–VI) MUST be considered part of
   code review, not a separate gate.
 
 ## Governance
@@ -133,4 +164,4 @@ followed by a proposed amendment. Complexity that violates Principle V
 (Simplicity & Incremental Delivery) MUST be explicitly justified before
 approval.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-29
+**Version**: 1.1.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-29
