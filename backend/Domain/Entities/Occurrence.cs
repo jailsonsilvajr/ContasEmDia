@@ -5,7 +5,7 @@ namespace ContasEmDia.Domain.Entities;
 public sealed class Occurrence
 {
     private readonly Guid _id;
-    private readonly ReferencePeriod _referencePeriod;
+    private readonly ReferencePeriod _referencePeriod = new(1, 1);
     private readonly CalendarDate _dueDate;
     private readonly OccurrenceStatus _status;
     private readonly ExpenseName _name;
@@ -23,6 +23,22 @@ public sealed class Occurrence
         _referencePeriod = referencePeriod;
         _dueDate = dueDate;
         _status = new OccurrenceStatus(OccurrenceStatusType.Pending);
+        _name = name;
+        _category = category;
+        _expectedAmount = expectedAmount;
+    }
+
+    private Occurrence(
+        Guid id,
+        CalendarDate dueDate,
+        OccurrenceStatus status,
+        ExpenseName name,
+        ExpenseCategory category,
+        Money expectedAmount)
+    {
+        _id = id;
+        _dueDate = dueDate;
+        _status = status;
         _name = name;
         _category = category;
         _expectedAmount = expectedAmount;

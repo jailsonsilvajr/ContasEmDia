@@ -49,6 +49,28 @@ public sealed class RecurringExpense
         }
     }
 
+    private RecurringExpense(
+        Guid id,
+        ExpenseName name,
+        ExpenseCategory category,
+        Money monthlyAmount,
+        DueDay dueDay,
+        CalendarDate startDate,
+        Frequency frequency,
+        RecurringExpenseStatus status,
+        Note note)
+    {
+        _id = id;
+        _name = name;
+        _category = category;
+        _monthlyAmount = monthlyAmount;
+        _dueDay = dueDay;
+        _startDate = startDate;
+        _frequency = frequency;
+        _status = status;
+        _note = note;
+    }
+
     public Guid GetId() => _id;
 
     public ExpenseName GetName() => _name;

@@ -1,15 +1,20 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 1.0.0 → 1.1.0
-Rationale: MINOR bump — a new Core Principle (VI. Domain-Driven Design in the
-Domain Layer) was added with material, non-negotiable rules for the backend
-Domain project. No existing principle was removed or redefined incompatibly.
+Version change: 1.1.0 → 1.2.0
+Rationale: MINOR bump — Principle VI was materially expanded with a new
+EF Core reconstruction-constructor rule, and a new Core Principle (VII.
+Infrastructure Layer Implementation) was added with non-negotiable rules for
+the backend Infrastructure project. No existing principle was removed or
+redefined incompatibly.
 
-Modified principles: N/A
+Modified principles:
+- VI. Domain-Driven Design in the Domain Layer — added rule requiring a
+  private, parameterized constructor for EF Core reconstruction on
+  Aggregates, Entities, and Value Objects.
 
 Added sections:
-- Core Principles: VI. Domain-Driven Design in the Domain Layer
+- Core Principles: VII. Infrastructure Layer Implementation
 
 Removed sections: N/A
 
@@ -97,6 +102,12 @@ under the following non-negotiable rules:
   constructors. Parameterless construction, public setters used for
   initialization, or object-initializer-based creation that bypasses
   constructor validation MUST NOT be used.
+- Every Aggregate, Entity, and Value Object MUST additionally declare a
+  private, parameterized constructor used exclusively by Entity Framework
+  Core to reconstruct instances from persisted data. This constructor MUST
+  remain private, MUST NOT be called from application or domain code, and
+  MUST NOT be used as a way to bypass the invariant validation performed by
+  the public constructor(s).
 - The identifier of every Aggregate and every Entity MUST be a GUID.
 - Properties of Aggregates, Entities, and Value Objects MUST NOT be exposed as
   directly gettable/settable state. All reads and mutations MUST go through
@@ -117,6 +128,33 @@ domain model instead of leaking into services or persistence code, and keep
 the Domain project's structure predictable and consistent as more Aggregates,
 Entities, and Value Objects are added.
 
+### VII. Infrastructure Layer Implementation
+The backend Infrastructure project MUST provide the persistence
+implementation for the Domain layer under the following non-negotiable
+rules:
+- The Infrastructure project MUST implement every Repository interface
+  defined in the Domain project's `/Repositories` folder; no Domain
+  repository interface may be left without a concrete implementation.
+- The Infrastructure project MUST organize its content into, at minimum,
+  the following top-level folders: `/Repositories` (repository
+  implementations), `/Migrations` (EF Core migrations), `/Configs` (EF Core
+  entity and relationship configuration classes), and `/Contexts` (DbContext
+  classes). Additional folders MAY be added as needed.
+- EF Core migrations belonging to previously delivered features MUST NOT be
+  altered, renamed, or deleted. Schema changes for new work MUST be
+  introduced as new migrations.
+- The Infrastructure project MUST use Entity Framework Core 10.
+- The Infrastructure layer MUST NOT implement an explicit Unit of Work
+  abstraction. `DbContext.SaveChangesAsync()` IS the project's Unit of Work,
+  and callers MUST invoke it directly rather than through a custom wrapper.
+- Repository access MUST be provided through a single `RepositoryManager`
+  that exposes each repository as a `Lazy<T>`-backed property, so that a
+  given repository is instantiated only on first use.
+Rationale: These constraints keep persistence concerns isolated behind the
+Domain-defined repository contracts, prevent migration history for shipped
+features from being rewritten, and avoid duplicating EF Core's own
+transaction/unit-of-work semantics with a redundant abstraction.
+
 ## Technology Stack Requirements
 
 - Backend: .NET 10 (C#). New backend projects/services MUST target .NET 10
@@ -131,6 +169,8 @@ Entities, and Value Objects are added.
 - Dependency upgrades within the same major version (e.g., .NET 10.x,
   Angular 22.x) are routine maintenance and do NOT require a constitution
   amendment; changes to the major backend or frontend platform version do.
+- Persistence: Entity Framework Core 10, per Principle VII. Downgrading the
+  EF Core major version requires a constitution amendment.
 
 ## Development Workflow & Quality Gates
 
@@ -140,7 +180,7 @@ Entities, and Value Objects are added.
   linters/analyzers on every pull request; a red build blocks merge.
 - Breaking API changes MUST be called out explicitly in the pull request
   description, including the migration path for frontend consumers.
-- Constitution compliance (Principles I–VI) MUST be considered part of
+- Constitution compliance (Principles I–VII) MUST be considered part of
   code review, not a separate gate.
 
 ## Governance
@@ -164,4 +204,4 @@ followed by a proposed amendment. Complexity that violates Principle V
 (Simplicity & Incremental Delivery) MUST be explicitly justified before
 approval.
 
-**Version**: 1.1.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-29
+**Version**: 1.2.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-31
