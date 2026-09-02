@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-accent: #2E6FF2;
+  --color-accent-hover: #1B4FCB;
+  --color-danger: #D92D20;
+  --color-success: #0F7B4E;
+  --color-border: #D0D5DD;
+  --color-border-light: #E4E7EC;
+  --color-muted: #667085;
+  --font-heading: "Sora", sans-serif;
+  --font-sans: "Public Sans", system-ui, sans-serif;
+}
