@@ -1,0 +1,248 @@
+@if (formStatus() === 'success') {
+  <section class="mx-auto max-w-xl p-6" data-testid="success-view">
+    <div class="flex items-start gap-3.5 rounded-xl border border-[#B7E4CC] bg-[#E7F6EF] p-5" role="alert">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#0F7B4E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M8 12.5l2.5 2.5 5.5-6"></path>
+      </svg>
+      <div class="flex-1">
+        <p class="text-[15px] font-bold text-success">"{{ savedName() }}" cadastrada</p>
+        <p class="mt-1 text-[13px] text-[#2E5A45]">A despesa recorrente foi registrada com sucesso.</p>
+        <button
+          type="button"
+          data-testid="nova-despesa-btn"
+          class="mt-3 rounded-lg border border-[#B7E4CC] bg-white px-3.5 py-2 text-[13px] font-semibold text-success hover:bg-[#F2F4F7]"
+          (click)="onNovaDespesa()"
+        >
+          Cadastrar outra despesa
+        </button>
+      </div>
+    </div>
+  </section>
+} @else {
+  <form class="mx-auto max-w-[900px] space-y-6 p-6" (submit)="$event.preventDefault(); onSalvar()">
+    <div>
+      <h1 class="font-heading text-2xl font-extrabold">Nova despesa recorrente</h1>
+      <p class="mt-1.5 text-sm text-muted">
+        Cadastre uma conta que se repete todo mês. A ocorrência do mês atual é gerada automaticamente.
+      </p>
+    </div>
+
+    @if (submitAttempted() && !isFormValid()) {
+      <p class="rounded-lg border border-danger bg-[#FEF3F2] px-3 py-2 text-sm text-danger" data-testid="corrigir-banner" role="alert">
+        Corrija os campos destacados antes de salvar.
+      </p>
+    }
+
+    @if (formStatus() === 'error' && submitErrorMessage()) {
+      <div class="flex items-start gap-3.5 rounded-xl border border-[#FECDCA] bg-[#FEF3F2] p-5" data-testid="erro-banner" role="alert">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#D92D20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <line x1="12" y1="8" x2="12" y2="13"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <div class="flex-1">
+          <p class="text-[15px] font-bold text-[#B42318]">Não foi possível salvar a despesa</p>
+          <p class="mt-1 text-[13px] text-[#912018]">{{ submitErrorMessage() }}</p>
+          <button
+            type="button"
+            data-testid="tentar-novamente-btn"
+            class="mt-3 rounded-lg border border-[#FECDCA] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#B42318] hover:bg-[#F2F4F7]"
+            (click)="onTentarNovamente()"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    }
+
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+      <div class="flex flex-[1.4] flex-col gap-[18px]">
+        <div>
+          <label for="nome" class="mb-1.5 block text-[13px] font-semibold">Nome</label>
+          <input
+            id="nome"
+            type="text"
+            maxlength="100"
+            data-testid="nome-input"
+            class="block w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+            [class.border-danger]="showNomeError()"
+            [class.border-border]="!showNomeError()"
+            [attr.aria-invalid]="showNomeError() || null"
+            [attr.aria-describedby]="showNomeError() ? 'nome-error' : null"
+            [value]="nome()"
+            (input)="onNomeInput($event)"
+            (blur)="onNomeBlur()"
+          />
+          @if (showNomeError()) {
+            <p id="nome-error" data-testid="nome-error" class="mt-1.5 text-xs text-danger" role="alert">{{ nomeError() }}</p>
+          }
+        </div>
+
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div>
+            <label for="categoria" class="mb-1.5 block text-[13px] font-semibold">Categoria</label>
+            <select
+              id="categoria"
+              data-testid="categoria-select"
+              class="block w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+              [value]="categoria()"
+              (change)="onCategoriaChange($event)"
+            >
+              @for (option of categoryOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label for="valor" class="mb-1.5 block text-[13px] font-semibold">Valor previsto mensal</label>
+            <div
+              class="flex items-center rounded-lg border bg-white px-3"
+              [class.border-danger]="showValorError()"
+              [class.border-border]="!showValorError()"
+            >
+              <span class="mr-1.5 text-sm text-muted">R$</span>
+              <input
+                id="valor"
+                type="text"
+                inputmode="decimal"
+                data-testid="valor-input"
+                class="w-full flex-1 border-none bg-transparent py-2.5 text-sm focus:outline-none"
+                [attr.aria-invalid]="showValorError() || null"
+                [attr.aria-describedby]="showValorError() ? 'valor-error' : null"
+                [value]="valor()"
+                (input)="onValorInput($event)"
+                (blur)="onValorBlur()"
+              />
+            </div>
+            @if (showValorError()) {
+              <p id="valor-error" data-testid="valor-error" class="mt-1.5 text-xs text-danger" role="alert">{{ valorError() }}</p>
+            }
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div>
+            <label for="dia" class="mb-1.5 block text-[13px] font-semibold">Dia de vencimento</label>
+            <input
+              id="dia"
+              type="text"
+              inputmode="numeric"
+              data-testid="dia-input"
+              class="block w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+              [class.border-danger]="showDiaError()"
+              [class.border-border]="!showDiaError()"
+              [attr.aria-invalid]="showDiaError() || null"
+              [attr.aria-describedby]="showDiaError() ? 'dia-error' : null"
+              [value]="dia()"
+              (input)="onDiaInput($event)"
+              (blur)="onDiaBlur()"
+            />
+            @if (showDiaError()) {
+              <p id="dia-error" data-testid="dia-error" class="mt-1.5 text-xs text-danger" role="alert">{{ diaError() }}</p>
+            }
+          </div>
+
+          <div>
+            <label for="data-inicio" class="mb-1.5 block text-[13px] font-semibold">Data de início</label>
+            <input
+              id="data-inicio"
+              type="text"
+              placeholder="dd/mm/aaaa"
+              data-testid="data-inicio-input"
+              class="block w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+              [class.border-danger]="showDataInicioError()"
+              [class.border-border]="!showDataInicioError()"
+              [attr.aria-invalid]="showDataInicioError() || null"
+              [attr.aria-describedby]="showDataInicioError() ? 'data-inicio-error' : null"
+              [value]="dataInicio()"
+              (input)="onDataInicioInput($event)"
+              (blur)="onDataInicioBlur()"
+            />
+            @if (showDataInicioError()) {
+              <p id="data-inicio-error" data-testid="data-inicio-error" class="mt-1.5 text-xs text-danger" role="alert">{{ dataInicioError() }}</p>
+            }
+          </div>
+        </div>
+
+        <div>
+          <label for="frequencia" class="mb-1.5 block text-[13px] font-semibold">Frequência</label>
+          <input
+            id="frequencia"
+            type="text"
+            data-testid="frequencia-input"
+            class="block w-full rounded-lg border border-border-light bg-[#F9FAFB] px-3 py-2.5 text-sm text-muted"
+            value="Mensal"
+            disabled
+          />
+        </div>
+
+        <fieldset>
+          <legend class="mb-1.5 block text-[13px] font-semibold">Status</legend>
+          <div class="mt-1 inline-flex overflow-hidden rounded-lg border border-border" role="group">
+            <button
+              type="button"
+              data-testid="status-ativa-btn"
+              class="px-4 py-2 text-[13px] font-semibold"
+              [class.bg-accent]="status() === 'ativa'"
+              [class.text-white]="status() === 'ativa'"
+              [class.text-muted]="status() !== 'ativa'"
+              [attr.aria-pressed]="status() === 'ativa'"
+              (click)="setStatus('ativa')"
+            >
+              Ativa
+            </button>
+            <button
+              type="button"
+              data-testid="status-pausada-btn"
+              class="border-l border-border px-4 py-2 text-[13px] font-semibold"
+              [class.bg-accent]="status() === 'pausada'"
+              [class.text-white]="status() === 'pausada'"
+              [class.text-muted]="status() !== 'pausada'"
+              [attr.aria-pressed]="status() === 'pausada'"
+              (click)="setStatus('pausada')"
+            >
+              Pausada
+            </button>
+          </div>
+        </fieldset>
+
+        <div>
+          <label for="observacao" class="mb-1.5 block text-[13px] font-semibold">
+            Observação <span class="font-normal text-muted">(opcional)</span>
+          </label>
+          <textarea
+            id="observacao"
+            data-testid="observacao-textarea"
+            class="block min-h-[80px] w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+            [value]="observacao()"
+            (input)="onObservacaoInput($event)"
+          ></textarea>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button
+            type="submit"
+            data-testid="salvar-btn"
+            class="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-default disabled:opacity-70"
+            [disabled]="formStatus() === 'loading'"
+          >
+            {{ formStatus() === 'loading' ? 'Salvando…' : 'Salvar despesa' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="flex-1 lg:max-w-[340px]">
+        <app-despesa-preview
+          [nome]="nomePreview()"
+          [categoriaLabel]="categoriaLabel()"
+          [catColor]="catColor()"
+          [valorFmt]="valorFmt()"
+          [diaLabel]="diaLabel()"
+          [statusHelperLabel]="statusHelperLabel()"
+        />
+      </div>
+    </div>
+  </form>
+}

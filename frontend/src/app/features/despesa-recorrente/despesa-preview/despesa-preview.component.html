@@ -1,0 +1,15 @@
+<div class="rounded-xl border border-border-light bg-white p-[18px]" data-testid="despesa-preview">
+  <div class="mb-3 flex items-center gap-[7px]">
+    <span class="h-2 w-2 shrink-0 rounded-full" [style.background-color]="catColor()"></span>
+    <span class="text-[15px] font-bold" data-testid="preview-nome">{{ nome() }}</span>
+  </div>
+  <div class="mb-2 flex justify-between text-[13px] text-muted">
+    <span data-testid="preview-categoria">{{ categoriaLabel() }}</span>
+    <span data-testid="preview-dia">{{ diaLabel() }}</span>
+  </div>
+  <div class="mt-3.5 flex items-center justify-between border-t border-[#F0F1F3] pt-3.5">
+    <span class="font-heading text-[17px] font-bold" data-testid="preview-valor">{{ valorFmt() }}</span>
+    <span class="rounded-full bg-[#EEF2FF] px-[11px] py-[5px] text-[11px] font-bold text-[#3446C9]">Pendente</span>
+  </div>
+  <div class="mt-2.5 text-xs text-[#98A2B3]" data-testid="preview-status">{{ statusHelperLabel() }}</div>
+</div>
