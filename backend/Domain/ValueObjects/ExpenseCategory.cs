@@ -17,7 +17,7 @@ public sealed class ExpenseCategory
     {
         if (!Enum.IsDefined(value))
         {
-            throw new ArgumentException("Expense category must be a defined category value.", nameof(value));
+            throw new ArgumentException("A categoria da despesa deve ser um valor de categoria válido.", nameof(value));
         }
 
         _value = value;

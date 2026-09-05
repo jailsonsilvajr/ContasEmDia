@@ -13,7 +13,7 @@ public sealed class Frequency
     {
         if (value != FrequencyType.Monthly)
         {
-            throw new ArgumentException("Only monthly frequency is supported in this phase.", nameof(value));
+            throw new ArgumentException("Apenas a frequência mensal é suportada nesta fase.", nameof(value));
         }
 
         _value = value;

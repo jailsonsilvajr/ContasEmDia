@@ -8,7 +8,7 @@ public sealed class ExpenseName
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new ArgumentException("Expense name must not be null, empty, or whitespace-only.", nameof(value));
+            throw new ArgumentException("O nome da despesa não pode ser nulo, vazio ou conter apenas espaços em branco.", nameof(value));
         }
 
         _value = value;

@@ -14,7 +14,7 @@ public sealed class OccurrenceStatus
     {
         if (!Enum.IsDefined(value))
         {
-            throw new ArgumentException("Occurrence status must be a defined status value.", nameof(value));
+            throw new ArgumentException("O status da ocorrência deve ser um valor de status válido.", nameof(value));
         }
 
         _value = value;

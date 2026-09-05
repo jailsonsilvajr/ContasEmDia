@@ -1,38 +1,30 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 1.1.0 → 1.2.0
-Rationale: MINOR bump — Principle VI was materially expanded with a new
-EF Core reconstruction-constructor rule; a new Core Principle (VII.
-Infrastructure Layer Implementation) was added with non-negotiable rules for
-the backend Infrastructure project; and three further Core Principles
-governing the Angular frontend (VIII. Angular Standalone Architecture, IX.
-Signal-Based Reactivity & HTTP Access, X. Dependency Injection & Frontend
-Coding Standards) were added, plus a new "AI Agent Guardrails" section.
-Principles II (Test-First Development) and III (Type Safety & Static
-Analysis) were materially expanded with frontend-specific
-testing/coverage/accessibility and lint-suppression rules. No existing
-principle was removed or redefined incompatibly.
+Version change: 1.4.0 → 1.4.1
+Rationale: PATCH bump — clarified the scope of the PT-BR business-rule
+exception message rule in Principle VI: it now explicitly reads "every
+exception raised... to signal a violated business rule (validation error,
+invariant violation, or disallowed operation)" instead of "every validation
+exception", removing ambiguity about whether non-"validation"-labeled
+business-rule exceptions (e.g., a disallowed operation given current state)
+were covered. This is a wording clarification of the rule added in 1.4.0; it
+does not change which layer owns business rules (Domain-only, per Principles
+VI/XI) nor introduce a new principle.
 
 Modified principles:
-- VI. Domain-Driven Design in the Domain Layer — added rule requiring a
-  private, parameterized constructor for EF Core reconstruction on
-  Aggregates, Entities, and Value Objects.
-- II. Test-First Development → expanded with frontend test runner,
-  coverage, and WCAG 2.1 AA accessibility requirements.
-- III. Type Safety & Static Analysis → expanded with explicit no-`any` and
-  no-unjustified-lint-suppression rules for the frontend.
+- VI. Domain-Driven Design in the Domain Layer — broadened the PT-BR
+  exception message rule's wording from "validation exception" to "any
+  exception signaling a violated business rule", and updated the rationale
+  accordingly.
 
-Added sections:
-- Core Principles: VII. Infrastructure Layer Implementation
-- Core Principles: VIII. Angular Standalone Architecture & Project Structure
-- Core Principles: IX. Signal-Based Reactivity & HTTP Access
-- Core Principles: X. Dependency Injection & Frontend Coding Standards
-- AI Agent Guardrails
+Added sections: None.
 
 Removed sections: N/A
 
 Deferred / TODO placeholders: None.
+
+Other updates: None.
 
 Templates requiring follow-up review (not modified by this command, listed
 for awareness only): .specify/templates/plan-template.md,
@@ -150,10 +142,24 @@ under the following non-negotiable rules:
 - The Domain layer MUST NOT implement Domain Events. Cross-aggregate or
   cross-context notification mechanisms are out of scope until a future
   amendment explicitly authorizes them.
+- Every exception raised by an Aggregate, Entity, or Value Object
+  constructor or business method to signal a violated business rule — a
+  validation error, an invariant violation, or a disallowed operation —
+  MUST carry a user-facing message in Brazilian Portuguese (PT-BR), scoped
+  to the specific field or rule that was violated. This applies to every
+  business-rule exception without exception, not only to what might
+  narrowly be labeled "validation". Outer layers (Application, API) MUST
+  relay this message as-is when reporting the failure to the caller; they
+  MUST NOT maintain a separate, duplicated set of messages or
+  translate/rewrite the Domain's message.
 Rationale: These constraints keep business rules encapsulated inside a rich
 domain model instead of leaking into services or persistence code, and keep
 the Domain project's structure predictable and consistent as more Aggregates,
-Entities, and Value Objects are added.
+Entities, and Value Objects are added. Requiring the Domain itself to own the
+PT-BR message text for every business-rule exception — not just validation
+errors — keeps a single source of truth for user-facing wording next to the
+rule it describes, instead of scattering translated or duplicated copies
+across outer layers.
 
 ### VII. Infrastructure Layer Implementation
 The backend Infrastructure project MUST provide the persistence
@@ -229,6 +235,41 @@ state as immutable prevents a common class of Angular change-detection
 bugs where a mutated reference does not trigger the reactivity Angular (or
 `OnPush`) is expecting.
 
+### XI. Application Layer Implementation
+The backend Application project MUST orchestrate use cases on top of the
+Domain layer under the following non-negotiable rules:
+- Each UseCase MUST be organized in its own dedicated folder within the
+  Application project (e.g. `/UseCases/<NomeDoUseCase>/`), grouping that
+  UseCase's interface, implementation, Input, and Output together.
+- Every UseCase MUST have an interface. Interfaces MUST be named
+  `I<Nome>UseCase` and implementations MUST be named `<Nome>UseCase`
+  (e.g. `ICreateAccountUseCase` / `CreateAccountUseCase`).
+- Every UseCase MUST define its own Input and Output types, scoped to that
+  UseCase only; Input/Output types MUST NOT be shared or reused across
+  different UseCases. They MUST be named `<NomeDoUseCase>Input` and
+  `<NomeDoUseCase>Output` (e.g. `CreateAccountUseCaseInput` /
+  `CreateAccountUseCaseOutput`).
+- UseCases MUST only orchestrate: at minimum, fetch the relevant
+  Aggregate(s) from the repository, invoke the appropriate business
+  method(s) on the Aggregate to perform the operation, and finish by
+  calling `SaveChangesAsync()`. UseCases MUST NOT implement business rules
+  or invariant validation themselves — that logic belongs exclusively in
+  the Domain layer's Aggregates, Entities, and Value Objects (Principle
+  VI).
+- The Application project MUST depend only on the Domain project. It
+  MUST NOT reference the Infrastructure project or any other outer-layer
+  project directly; Infrastructure implementations MUST be supplied to
+  Application through Domain-defined abstractions (e.g. repository
+  interfaces), resolved via dependency injection at composition time.
+Rationale: A folder-per-UseCase structure with a consistent
+interface/implementation and Input/Output naming convention keeps a
+growing Application layer predictable to navigate. Restricting UseCases to
+orchestration keeps business rules concentrated in the rich Domain model
+(Principle VI) rather than leaking into application services, and a
+Domain-only dependency keeps the Application layer free of persistence or
+infrastructure concerns, preserving the direction of dependency from outer
+layers inward.
+
 ## Technology Stack Requirements
 
 - Backend: .NET 10 (C#). New backend projects/services MUST target .NET 10
@@ -256,7 +297,7 @@ bugs where a mutated reference does not trigger the reactivity Angular (or
   linters/analyzers on every pull request; a red build blocks merge.
 - Breaking API changes MUST be called out explicitly in the pull request
   description, including the migration path for frontend consumers.
-- Constitution compliance (Principles I–X) MUST be considered part of
+- Constitution compliance (Principles I–XI) MUST be considered part of
   code review, not a separate gate.
 
 ## AI Agent Guardrails
@@ -297,4 +338,4 @@ followed by a proposed amendment. Complexity that violates Principle V
 (Simplicity & Incremental Delivery) MUST be explicitly justified before
 approval.
 
-**Version**: 1.2.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-31
+**Version**: 1.4.1 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-09-04

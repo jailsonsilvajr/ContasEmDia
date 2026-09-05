@@ -8,12 +8,12 @@ public sealed class Money
     {
         if (value <= 0)
         {
-            throw new ArgumentException("Money value must be greater than zero.", nameof(value));
+            throw new ArgumentException("O valor monetário deve ser maior que zero.", nameof(value));
         }
 
         if (decimal.Round(value, 2) != value)
         {
-            throw new ArgumentException("Money value must have at most two decimal places.", nameof(value));
+            throw new ArgumentException("O valor monetário deve ter no máximo duas casas decimais.", nameof(value));
         }
 
         _value = value;
