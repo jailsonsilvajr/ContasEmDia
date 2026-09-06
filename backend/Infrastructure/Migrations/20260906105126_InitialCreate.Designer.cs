@@ -4,16 +4,16 @@ using System.Collections.Generic;
 using ContasEmDia.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
 namespace ContasEmDia.Infrastructure.Migrations
 {
     [DbContext(typeof(ContasEmDiaDbContext))]
-    [Migration("20260831201615_InitialCreate")]
+    [Migration("20260906105126_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -22,42 +22,43 @@ namespace ContasEmDia.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "10.0.11")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("ContasEmDia.Domain.Aggregates.RecurringExpense", b =>
                 {
                     b.Property<Guid>("_id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("Id");
 
                     b.Property<int>("_category")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("Category");
 
                     b.Property<int>("_dueDay")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("DueDay");
 
                     b.Property<int>("_frequency")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("Frequency");
 
                     b.Property<decimal>("_monthlyAmount")
-                        .HasColumnType("decimal(18,2)")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
                         .HasColumnName("MonthlyAmount");
 
                     b.Property<string>("_name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("Name");
 
                     b.Property<string>("_note")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnType("character varying(1000)")
                         .HasColumnName("Note");
 
                     b.Property<DateOnly>("_startDate")
@@ -65,7 +66,7 @@ namespace ContasEmDia.Infrastructure.Migrations
                         .HasColumnName("StartDate");
 
                     b.Property<int>("_status")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("Status");
 
                     b.HasKey("_id");
@@ -77,14 +78,14 @@ namespace ContasEmDia.Infrastructure.Migrations
                 {
                     b.Property<Guid>("_id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("Id");
 
                     b.Property<Guid>("RecurringExpenseId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("_category")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("Category");
 
                     b.Property<DateOnly>("_dueDate")
@@ -92,17 +93,18 @@ namespace ContasEmDia.Infrastructure.Migrations
                         .HasColumnName("DueDate");
 
                     b.Property<decimal>("_expectedAmount")
-                        .HasColumnType("decimal(18,2)")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
                         .HasColumnName("ExpectedAmount");
 
                     b.Property<string>("_name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("Name");
 
                     b.Property<int>("_status")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("Status");
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "_referencePeriod", "ContasEmDia.Domain.Entities.Occurrence._referencePeriod#ReferencePeriod", b1 =>
@@ -110,11 +112,11 @@ namespace ContasEmDia.Infrastructure.Migrations
                             b1.IsRequired();
 
                             b1.Property<int>("Month")
-                                .HasColumnType("int")
+                                .HasColumnType("integer")
                                 .HasColumnName("ReferenceMonth");
 
                             b1.Property<int>("Year")
-                                .HasColumnType("int")
+                                .HasColumnType("integer")
                                 .HasColumnName("ReferenceYear");
                         });
 

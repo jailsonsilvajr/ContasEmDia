@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ContasEmDiaDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("ContasEmDia")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("ContasEmDia")));
 
 builder.Services.AddScoped<IRepositoryManager, RepositoryManager>();
 builder.Services.AddScoped<ICreateRecurringExpenseUseCase, CreateRecurringExpenseUseCase>();
