@@ -1,0 +1,70 @@
+# docker-compose.yml (copiado para /opt/contasemdia na VPS)
+
+services:
+  db:
+    # Imagem oficial do PostgreSQL — bem mais leve em memória que o SQL
+    # Server, adequada para a VPS de 1 GB de RAM
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      # Nome do banco criado automaticamente na primeira inicialização do
+      # container (só roda uma vez, quando o volume está vazio)
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Usuário "superuser" do PostgreSQL, criado junto com o banco acima
+      POSTGRES_USER: ${POSTGRES_USER}
+      # Senha do usuário acima
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # Persiste os dados do PostgreSQL em um volume nomeado do Docker,
+      # sobrevivendo a recriações do container (deploys/updates)
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          # Teto de memória do container — folgado para o PostgreSQL, que
+          # tipicamente usa bem menos que isso em uso pessoal/baixo tráfego
+          memory: 300M
+
+  api:
+    image: ghcr.io/${GHCR_OWNER}/contasemdia-api:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Connection string no formato do Npgsql (provider PostgreSQL do EF
+      # Core) — "db" é resolvido pela rede interna do Compose
+      ConnectionStrings__ContasEmDia: "Host=db;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          memory: 250M
+
+  frontend:
+    image: ghcr.io/${GHCR_OWNER}/contasemdia-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      # Única porta publicada para fora do host — mapeia a porta 80 da VPS
+      # para a porta 80 do container Nginx
+      - "80:80"
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          memory: 50M
+
+networks:
+  # Rede interna privada do Compose, usada para a comunicação entre os
+  # três serviços sem expor "api" e "db" para fora da VPS
+  internal:
+
+volumes:
+  # Volume nomeado que guarda os arquivos de dados do PostgreSQL
+  postgres-data:

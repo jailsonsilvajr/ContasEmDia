@@ -1,0 +1,97 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["Backend CI", "Frontend CI"]
+    types: [completed]
+    # Restringe o disparo a execuções de CI feitas na branch main — CI de
+    # pull request roda na branch de origem do PR, não em "main"
+    branches: [main]
+
+permissions:
+  contents: read
+  # Necessário para o job conseguir publicar (push) imagens no GHCR
+  packages: write
+
+jobs:
+  build-push-backend:
+    # workflow_run dispara para qualquer conclusão (sucesso ou falha) das
+    # duas CIs — sem esta guarda, a imagem seria buildada/publicada mesmo
+    # com testes quebrados
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      # Baixa o código do repositório para o runner do Actions, fixando o
+      # commit exato (head_sha) que passou na CI — sem "ref", o checkout
+      # pegaria o HEAD atual de main, que pode já ter avançado
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      # Autentica no GHCR usando o GITHUB_TOKEN automático (escopo
+      # packages:write concedido pelo bloco "permissions" acima)
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Builda a imagem do backend a partir do Dockerfile do documento 3 e
+      # publica no GHCR com a tag "latest"
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Api/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/contasemdia-api:latest
+
+  build-push-frontend:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Builda a imagem do frontend (Angular + Nginx) e publica no GHCR
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/contasemdia-frontend:latest
+
+  deploy:
+    # Só roda depois que as duas imagens acima foram publicadas com sucesso
+    needs: [build-push-backend, build-push-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      # Conecta na VPS via SSH (usando os secrets cadastrados na seção 4.2)
+      # e executa o script abaixo remotamente
+      - name: Deploy on VPS via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # Entra no diretório onde estão o docker-compose.yml e o .env
+            cd /opt/contasemdia
+            # Baixa as imagens recém-publicadas no GHCR (api e frontend)
+            docker compose pull
+            # Recria os containers que tiverem imagem nova, mantendo o "db"
+            # intacto (sem imagem nova, não é recriado)
+            docker compose up -d
+            # Remove imagens Docker antigas/não referenciadas, liberando
+            # espaço em disco na VPS
+            docker image prune -f
