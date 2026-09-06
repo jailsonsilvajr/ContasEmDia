@@ -29,7 +29,7 @@ public sealed class RecurringExpenseConfigurations : IEntityTypeConfiguration<Re
         builder.Property<Money>("_monthlyAmount")
             .HasColumnName("MonthlyAmount")
             .HasConversion(vo => vo.GetValue(), value => new Money(value))
-            .HasColumnType("decimal(18,2)")
+            .HasPrecision(18, 2)
             .IsRequired();
 
         builder.Property<DueDay>("_dueDay")

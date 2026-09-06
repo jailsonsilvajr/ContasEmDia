@@ -15,15 +15,15 @@ namespace ContasEmDia.Infrastructure.Migrations
                 name: "RecurringExpenses",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Category = table.Column<int>(type: "int", nullable: false),
-                    DueDay = table.Column<int>(type: "int", nullable: false),
-                    Frequency = table.Column<int>(type: "int", nullable: false),
-                    MonthlyAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Note = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Category = table.Column<int>(type: "integer", nullable: false),
+                    DueDay = table.Column<int>(type: "integer", nullable: false),
+                    Frequency = table.Column<int>(type: "integer", nullable: false),
+                    MonthlyAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Note = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     StartDate = table.Column<DateOnly>(type: "date", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false)
+                    Status = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -34,15 +34,15 @@ namespace ContasEmDia.Infrastructure.Migrations
                 name: "Occurrences",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    RecurringExpenseId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Category = table.Column<int>(type: "int", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    RecurringExpenseId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Category = table.Column<int>(type: "integer", nullable: false),
                     DueDate = table.Column<DateOnly>(type: "date", nullable: false),
-                    ExpectedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    ReferenceMonth = table.Column<int>(type: "int", nullable: false),
-                    ReferenceYear = table.Column<int>(type: "int", nullable: false)
+                    ExpectedAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    ReferenceMonth = table.Column<int>(type: "integer", nullable: false),
+                    ReferenceYear = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {

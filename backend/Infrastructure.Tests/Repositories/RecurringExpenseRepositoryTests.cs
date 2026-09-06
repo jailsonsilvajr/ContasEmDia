@@ -6,12 +6,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ContasEmDia.Infrastructure.Tests.Repositories;
 
-[Collection(nameof(SqlServerCollection))]
+[Collection(nameof(PostgreSqlCollection))]
 public sealed class RecurringExpenseRepositoryTests
 {
-    private readonly SqlServerContainerFixture _fixture;
+    private readonly PostgreSqlContainerFixture _fixture;
 
-    public RecurringExpenseRepositoryTests(SqlServerContainerFixture fixture)
+    public RecurringExpenseRepositoryTests(PostgreSqlContainerFixture fixture)
     {
         _fixture = fixture;
     }

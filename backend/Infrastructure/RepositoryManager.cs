@@ -4,7 +4,7 @@ using ContasEmDia.Infrastructure.Repositories;
 
 namespace ContasEmDia.Infrastructure;
 
-public sealed class RepositoryManager
+public sealed class RepositoryManager : IRepositoryManager
 {
     private readonly Lazy<IRecurringExpenseRepository> _recurringExpenseRepository;
 

@@ -14,7 +14,7 @@ public sealed class ContasEmDiaDbContextFactory : IDesignTimeDbContextFactory<Co
     public ContasEmDiaDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<ContasEmDiaDbContext>();
-        optionsBuilder.UseSqlServer("Server=localhost;Database=ContasEmDia;Trusted_Connection=True;TrustServerCertificate=True;");
+        optionsBuilder.UseNpgsql("Host=localhost;Database=ContasEmDia;Username=postgres;Password=postgres");
 
         return new ContasEmDiaDbContext(optionsBuilder.Options);
     }

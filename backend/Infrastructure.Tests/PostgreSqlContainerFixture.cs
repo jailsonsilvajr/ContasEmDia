@@ -1,12 +1,12 @@
 using ContasEmDia.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
-using Testcontainers.MsSql;
+using Testcontainers.PostgreSql;
 
 namespace ContasEmDia.Infrastructure.Tests;
 
-public sealed class SqlServerContainerFixture : IAsyncLifetime
+public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 {
-    private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:18-alpine").Build();
 
     public async Task InitializeAsync()
     {
@@ -21,11 +21,11 @@ public sealed class SqlServerContainerFixture : IAsyncLifetime
     public ContasEmDiaDbContext CreateContext()
     {
         var optionsBuilder = new DbContextOptionsBuilder<ContasEmDiaDbContext>();
-        optionsBuilder.UseSqlServer(_container.GetConnectionString());
+        optionsBuilder.UseNpgsql(_container.GetConnectionString());
 
         return new ContasEmDiaDbContext(optionsBuilder.Options);
     }
 }
 
-[CollectionDefinition(nameof(SqlServerCollection))]
-public sealed class SqlServerCollection : ICollectionFixture<SqlServerContainerFixture>;
+[CollectionDefinition(nameof(PostgreSqlCollection))]
+public sealed class PostgreSqlCollection : ICollectionFixture<PostgreSqlContainerFixture>;

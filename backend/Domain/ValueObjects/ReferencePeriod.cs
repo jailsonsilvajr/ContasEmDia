@@ -6,12 +6,12 @@ public sealed class ReferencePeriod : IComparable<ReferencePeriod>
     {
         if (month is < 1 or > 12)
         {
-            throw new ArgumentException("Month must be between 1 and 12.", nameof(month));
+            throw new ArgumentException("O mês deve estar entre 1 e 12.", nameof(month));
         }
 
         if (year <= 0)
         {
-            throw new ArgumentException("Year must be greater than zero.", nameof(year));
+            throw new ArgumentException("O ano deve ser maior que zero.", nameof(year));
         }
 
         Year = year;

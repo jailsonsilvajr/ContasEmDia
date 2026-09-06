@@ -1,38 +1,30 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 1.1.0 → 1.2.0
-Rationale: MINOR bump — Principle VI was materially expanded with a new
-EF Core reconstruction-constructor rule; a new Core Principle (VII.
-Infrastructure Layer Implementation) was added with non-negotiable rules for
-the backend Infrastructure project; and three further Core Principles
-governing the Angular frontend (VIII. Angular Standalone Architecture, IX.
-Signal-Based Reactivity & HTTP Access, X. Dependency Injection & Frontend
-Coding Standards) were added, plus a new "AI Agent Guardrails" section.
-Principles II (Test-First Development) and III (Type Safety & Static
-Analysis) were materially expanded with frontend-specific
-testing/coverage/accessibility and lint-suppression rules. No existing
-principle was removed or redefined incompatibly.
+Version change: 1.7.0 → 1.8.0
+Rationale: MINOR bump — materially expanded Principle XII with a new
+mandatory rule; no principle removed or redefined incompatibly, and no new
+principle was created:
+- XII. API Layer Implementation: added a clause requiring every
+  shape/presence data-annotation attribute on a `DataRequest` (e.g.
+  `[Required]`, `[MaxLength]`, `[Range]`) to set an explicit `ErrorMessage`
+  in Brazilian Portuguese (PT-BR), so ASP.NET Core's default
+  English-language validation messages never reach the caller. This aligns
+  API-boundary validation feedback with the PT-BR user-facing message
+  requirement Principle VI already places on Domain business-rule
+  exceptions.
 
 Modified principles:
-- VI. Domain-Driven Design in the Domain Layer — added rule requiring a
-  private, parameterized constructor for EF Core reconstruction on
-  Aggregates, Entities, and Value Objects.
-- II. Test-First Development → expanded with frontend test runner,
-  coverage, and WCAG 2.1 AA accessibility requirements.
-- III. Type Safety & Static Analysis → expanded with explicit no-`any` and
-  no-unjustified-lint-suppression rules for the frontend.
+- XII. API Layer Implementation — added PT-BR `ErrorMessage` requirement
+  for shape/presence data-annotation validation.
 
-Added sections:
-- Core Principles: VII. Infrastructure Layer Implementation
-- Core Principles: VIII. Angular Standalone Architecture & Project Structure
-- Core Principles: IX. Signal-Based Reactivity & HTTP Access
-- Core Principles: X. Dependency Injection & Frontend Coding Standards
-- AI Agent Guardrails
+Added sections: None (the change extends an existing principle).
 
-Removed sections: N/A
+Removed sections: None.
 
 Deferred / TODO placeholders: None.
+
+Other updates: None.
 
 Templates requiring follow-up review (not modified by this command, listed
 for awareness only): .specify/templates/plan-template.md,
@@ -72,11 +64,31 @@ WCAG 2.1 Level AA accessibility guidelines (keyboard operability, semantic
 markup, sufficient contrast, ARIA attributes where native semantics are
 insufficient); accessibility is verified as part of component review, not
 deferred to a later pass.
+API endpoint tests MUST use `WebApplicationFactory` to exercise the HTTP
+pipeline end-to-end rather than invoking controllers or UseCases directly.
+Each endpoint MUST have one test per distinct response scenario it can
+produce (e.g., success, each documented business-rule failure, each
+documented not-found or shape/presence-validation failure — see Principle
+XII), so that every outcome an action declares via `ProducesResponseType`
+is independently verified. A dedicated folder/naming convention specific to
+API endpoint tests (analogous to `Domain.Tests`, `Infrastructure.Tests`, or
+`Application.Tests` for their respective layers) MUST NOT be introduced
+until more than one endpoint exists to justify it, per Principle V
+(Simplicity & Incremental Delivery); until then, endpoint tests MUST use
+the simplest structure that satisfies the `WebApplicationFactory` and
+one-test-per-scenario rules above.
 Rationale: A financial/bills-tracking domain requires high confidence in
 correctness; test-first development catches regressions before they reach
 users' financial data. Accessibility is a first-class, non-negotiable
 requirement because users must be able to manage their finances regardless
-of ability.
+of ability. `WebApplicationFactory` validates the API layer the way a real
+caller experiences it — routing, model binding, the exception-handling
+middleware, and serialization included — rather than a partial slice of
+that pipeline; one test per response scenario keeps every declared outcome
+honest and prevents undocumented or untested responses from shipping.
+Deferring a dedicated test-project structure until it is actually justified
+by endpoint count avoids speculative scaffolding for a single-endpoint API,
+consistent with Principle V.
 
 ### III. Type Safety & Static Analysis
 Backend code MUST use C# nullable reference types and enabled compiler
@@ -99,9 +111,21 @@ strings MUST NOT be committed to source control; all API endpoints that
 expose or mutate user financial data MUST enforce authentication and
 authorization; and input validation MUST occur at the API boundary before
 data reaches business logic or persistence.
+CURRENT-PHASE EXCEPTION (temporary, non-permanent): as of this amendment,
+the project has not yet introduced an authentication/authorization
+mechanism or a CORS policy; the API layer MAY be implemented and deployed
+to trusted development environments without them for now (see Principle
+XII). This exception MUST be treated as expired, and authentication,
+authorization, and CORS MUST be implemented, before the API is exposed to
+production or to any environment reachable outside a trusted development
+setting. Any PR introducing a production or externally-reachable
+deployment target MUST NOT proceed without first closing this exception.
 Rationale: ContasEmDia manages users' bills and financial obligations;
 mishandled data has direct real-world consequences for users, so security
-is a non-negotiable baseline rather than an optional hardening pass.
+is a non-negotiable baseline rather than an optional hardening pass. The
+current-phase exception exists only because the project has not yet
+reached a deployment stage where these mechanisms are wired in; it is a
+scheduled gap to close, not a lowering of the underlying standard.
 
 ### V. Simplicity & Incremental Delivery
 Features MUST be implemented with the simplest design that satisfies the
@@ -150,10 +174,24 @@ under the following non-negotiable rules:
 - The Domain layer MUST NOT implement Domain Events. Cross-aggregate or
   cross-context notification mechanisms are out of scope until a future
   amendment explicitly authorizes them.
+- Every exception raised by an Aggregate, Entity, or Value Object
+  constructor or business method to signal a violated business rule — a
+  validation error, an invariant violation, or a disallowed operation —
+  MUST carry a user-facing message in Brazilian Portuguese (PT-BR), scoped
+  to the specific field or rule that was violated. This applies to every
+  business-rule exception without exception, not only to what might
+  narrowly be labeled "validation". Outer layers (Application, API) MUST
+  relay this message as-is when reporting the failure to the caller; they
+  MUST NOT maintain a separate, duplicated set of messages or
+  translate/rewrite the Domain's message.
 Rationale: These constraints keep business rules encapsulated inside a rich
 domain model instead of leaking into services or persistence code, and keep
 the Domain project's structure predictable and consistent as more Aggregates,
-Entities, and Value Objects are added.
+Entities, and Value Objects are added. Requiring the Domain itself to own the
+PT-BR message text for every business-rule exception — not just validation
+errors — keeps a single source of truth for user-facing wording next to the
+rule it describes, instead of scattering translated or duplicated copies
+across outer layers.
 
 ### VII. Infrastructure Layer Implementation
 The backend Infrastructure project MUST provide the persistence
@@ -229,6 +267,130 @@ state as immutable prevents a common class of Angular change-detection
 bugs where a mutated reference does not trigger the reactivity Angular (or
 `OnPush`) is expecting.
 
+### XI. Application Layer Implementation
+The backend Application project MUST orchestrate use cases on top of the
+Domain layer under the following non-negotiable rules:
+- Each UseCase MUST be organized in its own dedicated folder within the
+  Application project (e.g. `/UseCases/<NomeDoUseCase>/`), grouping that
+  UseCase's interface, implementation, Input, and Output together.
+- Every UseCase MUST have an interface. Interfaces MUST be named
+  `I<Nome>UseCase` and implementations MUST be named `<Nome>UseCase`
+  (e.g. `ICreateAccountUseCase` / `CreateAccountUseCase`).
+- Every UseCase MUST define its own Input and Output types, scoped to that
+  UseCase only; Input/Output types MUST NOT be shared or reused across
+  different UseCases. They MUST be named `<NomeDoUseCase>Input` and
+  `<NomeDoUseCase>Output` (e.g. `CreateAccountUseCaseInput` /
+  `CreateAccountUseCaseOutput`).
+- UseCases MUST only orchestrate: at minimum, fetch the relevant
+  Aggregate(s) from the repository, invoke the appropriate business
+  method(s) on the Aggregate to perform the operation, and finish by
+  calling `SaveChangesAsync()`. UseCases MUST NOT implement business rules
+  or invariant validation themselves — that logic belongs exclusively in
+  the Domain layer's Aggregates, Entities, and Value Objects (Principle
+  VI).
+- The Application project MUST depend only on the Domain project. It
+  MUST NOT reference the Infrastructure project or any other outer-layer
+  project directly; Infrastructure implementations MUST be supplied to
+  Application through Domain-defined abstractions (e.g. repository
+  interfaces), resolved via dependency injection at composition time.
+Rationale: A folder-per-UseCase structure with a consistent
+interface/implementation and Input/Output naming convention keeps a
+growing Application layer predictable to navigate. Restricting UseCases to
+orchestration keeps business rules concentrated in the rich Domain model
+(Principle VI) rather than leaking into application services, and a
+Domain-only dependency keeps the Application layer free of persistence or
+infrastructure concerns, preserving the direction of dependency from outer
+layers inward.
+
+### XII. API Layer Implementation
+The backend API project MUST expose the system's HTTP surface under the
+following non-negotiable rules:
+- The API MUST be versioned (e.g., a URL segment such as `/api/v{n}/...` or
+  an equivalent explicit versioning scheme). Every endpoint MUST belong to
+  a declared version; breaking changes MUST be introduced under a new
+  version rather than mutating an existing one in place.
+- The API MUST expose machine-readable OpenAPI documentation and an
+  interactive SwaggerUI for exploring and exercising it.
+- Every endpoint/action that receives and/or returns a body MUST have a
+  dedicated request type and/or response type named `<Nome>DataRequest`
+  and/or `<Nome>DataResponse`, placed respectively in the API project's
+  `/Requests` and `/Responses` folders. These types MUST be implemented as
+  C# `record`s whenever the shape allows it (i.e., unless a concrete
+  technical constraint prevents using a record).
+- Every endpoint MUST return responses — both success and error — wrapped
+  in a single default response envelope shared identically across the
+  entire API. The envelope encapsulates the endpoint-specific
+  `DataResponse` (or an error payload) inside this common structure; no
+  endpoint may bypass it with a bespoke, one-off response shape.
+- Every action (endpoint) MUST explicitly declare all of its possible
+  response outcomes (e.g., via `ProducesResponseType` or the framework's
+  equivalent), so that both the OpenAPI spec and reviewers can see the
+  complete set of results — success and every documented error — a caller
+  may receive.
+- The API layer MUST NOT implement business rules. It MUST delegate all
+  business logic to the Application layer's UseCases (Principle XI), which
+  in turn delegate business-rule enforcement to the Domain layer
+  (Principle VI); the API layer's role is limited to request/response
+  handling, versioning, documentation, and mapping.
+- Every `DataRequest`/`DataResponse` MUST be mapped to/from its
+  corresponding UseCase Input/Output (Principle XI) through a dedicated
+  mapping placed in the API project's `/Mappings` folder, with exactly one
+  mapping file per DataRequest/DataResponse mapped. Mapping files MUST NOT
+  be merged together or contain business logic beyond shape translation.
+- The API MUST implement a single, global exception-handling middleware
+  that centralizes mapping of exceptions to HTTP status codes. At minimum:
+  a Domain exception signaling a violated business rule (Principle VI)
+  MUST map to `400 Bad Request` or `422 Unprocessable Entity`; a
+  not-found condition MUST map to `404 Not Found`; any unhandled or
+  unexpected exception MUST map to `500 Internal Server Error`. This
+  mapping MUST live only in the global middleware; individual controllers
+  and actions MUST NOT implement their own ad hoc try/catch-to-status-code
+  logic.
+- Validation performed at the API boundary MUST be limited to a
+  `DataRequest`'s shape, type, and field-presence/required-ness (e.g., via
+  data annotations and model binding). It MUST NOT attempt to validate
+  business rules. Business-rule validation MUST remain 100% inside the
+  Domain layer (Principle VI); the API layer MUST NOT duplicate,
+  anticipate, or re-implement any part of it.
+- Every shape/presence data-annotation attribute on a `DataRequest` (e.g.,
+  `[Required]`, `[MaxLength]`, `[Range]`) MUST set an explicit `ErrorMessage`
+  written in Brazilian Portuguese (PT-BR). ASP.NET Core's default,
+  English-language validation messages MUST NOT reach the caller.
+- Controllers MUST be placed in the API project's `/Controllers` folder.
+- Middleware components MUST be placed in the API project's `/Middlewares`
+  folder, and filters MUST be placed in its `/Filters` folder.
+- Per Principle IV's current-phase exception, the API layer MUST NOT
+  implement an authentication/authorization mechanism or a CORS policy at
+  this time. This is a temporary state, not a permanent architectural
+  choice, and MUST be revisited per Principle IV before any production or
+  externally-reachable deployment.
+Rationale: A versioned, self-documenting (OpenAPI/SwaggerUI) API surface
+with a uniform DataRequest/DataResponse and response-envelope convention
+keeps the API layer predictable for both human and machine consumers, and
+requiring every action to annotate its full set of possible outcomes keeps
+the contract honest. Confining the API layer to request/response handling
+and mapping — never business rules — preserves the same inward-pointing
+dependency direction established for the Application layer (Principle XI)
+and keeps business logic concentrated exclusively in the Domain layer
+(Principle VI). One mapping file per DataRequest/DataResponse keeps each
+translation small, independently reviewable, and easy to locate as the API
+surface grows. A single global exception-handling middleware keeps HTTP
+status mapping consistent and in one place instead of scattered,
+inconsistent try/catch blocks per action. Restricting API-boundary
+validation to shape/type/presence — and nothing more — keeps the Domain
+layer the single, authoritative owner of business-rule validation
+(Principle VI), preventing the same rule from silently drifting out of
+sync in two places. Requiring an explicit PT-BR `ErrorMessage` on every
+shape/presence annotation keeps that validation feedback consistent and in
+the caller's language, aligned with the same PT-BR user-facing message
+requirement Principle VI already places on Domain business-rule exceptions
+— a caller should never see an untranslated framework default regardless
+of which layer rejected the request. Dedicated `/Controllers`,
+`/Middlewares`, and `/Filters` folders keep the API project's structure
+predictable as it grows, mirroring the folder-per-concern convention
+already used in the Domain (Principle VI) and Infrastructure (Principle
+VII) layers.
+
 ## Technology Stack Requirements
 
 - Backend: .NET 10 (C#). New backend projects/services MUST target .NET 10
@@ -256,7 +418,7 @@ bugs where a mutated reference does not trigger the reactivity Angular (or
   linters/analyzers on every pull request; a red build blocks merge.
 - Breaking API changes MUST be called out explicitly in the pull request
   description, including the migration path for frontend consumers.
-- Constitution compliance (Principles I–X) MUST be considered part of
+- Constitution compliance (Principles I–XII) MUST be considered part of
   code review, not a separate gate.
 
 ## AI Agent Guardrails
@@ -297,4 +459,4 @@ followed by a proposed amendment. Complexity that violates Principle V
 (Simplicity & Incremental Delivery) MUST be explicitly justified before
 approval.
 
-**Version**: 1.2.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-31
+**Version**: 1.8.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-09-05

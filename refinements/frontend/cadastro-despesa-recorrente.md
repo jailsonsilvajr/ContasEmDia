@@ -212,16 +212,23 @@ em aberto".
 ### Ainda em aberto
 Nenhum ponto em aberto no momento.
 
-## Contrato de API necessário (documentação apenas — sem implementação)
+## Contrato de API necessário
 
-A tela depende de **um único endpoint**, ainda não implementado no backend
-(apenas o projeto `Domain` existe hoje): o do botão "Salvar despesa". Nenhum
-outro endpoint é necessário para esta tela (a lista de categorias é fixa no
-cliente — ver "Pontos em aberto" — e não há edição ou exclusão aqui). A
-forma dos dados abaixo segue o modelo de domínio já refinado
-(`RecurringExpense`/`Occurrence`/`ExpenseCategory`), para que o futuro time
-de backend implemente a camada de Aplicação/API sem divergir do domínio já
-especificado.
+**Atualizado em 2026-09-05** (FR-016 de
+[`004-api-despesa-recorrente`](../../specs/004-api-despesa-recorrente/)):
+este endpoint agora está implementado, com rota versionada e o envelope
+`ApiResponse<TData>`/`ApiError` fixado por aquela feature como convenção de
+toda a API (Princípio XII). Ver
+[`specs/004-api-despesa-recorrente/contracts/api-contract.md`](../../specs/004-api-despesa-recorrente/contracts/api-contract.md)
+para o contrato completo e definitivo (incluindo a resposta `500` e a
+documentação OpenAPI/SwaggerUI) — esta seção mantém apenas o recorte
+relevante ao frontend, na forma de request/response já usada aqui.
+
+A tela depende de **um único endpoint**: o do botão "Salvar despesa".
+Nenhum outro endpoint é necessário para esta tela (a lista de categorias é
+fixa no cliente — ver "Pontos em aberto" — e não há edição ou exclusão
+aqui). A forma dos dados abaixo segue o modelo de domínio já refinado
+(`RecurringExpense`/`Occurrence`/`ExpenseCategory`).
 
 `despesa-recorrente.model.ts` hardcoda a constante local usada para popular
 o `<select>` e para o mapeamento de rótulo no cartão de pré-visualização
@@ -241,7 +248,7 @@ const CATEGORY_OPTIONS: CategoryOption[] = [
 em `category` no `POST` abaixo; `label` é o rótulo em PT-BR exibido no
 `<select>` e no cartão de pré-visualização.
 
-### `POST /api/recurring-expenses`
+### `POST /api/v1/recurring-expenses`
 
 Cria uma despesa recorrente e, se aplicável, gera automaticamente a
 ocorrência do mês corrente (RF10/RF11).
@@ -263,48 +270,68 @@ ocorrência do mês corrente (RF10/RF11).
 
 ```json
 {
-  "id": "guid",
-  "name": "string",
-  "category": "Housing | Services | Transportation | Subscriptions | Other",
-  "monthlyAmount": 0.0,
-  "dueDay": 1,
-  "startDate": "yyyy-MM-dd",
-  "frequency": "Monthly",
-  "status": "Active | Paused",
-  "note": "string | null",
-  "occurrences": [
-    {
-      "id": "guid",
-      "referencePeriod": { "year": 0, "month": 1 },
-      "dueDate": "yyyy-MM-dd",
-      "status": "Pending",
-      "expectedAmount": 0.0,
-      "name": "string",
-      "category": "Housing | Services | Transportation | Subscriptions | Other"
-    }
-  ]
+  "success": true,
+  "data": {
+    "id": "guid",
+    "name": "string",
+    "category": "Housing | Services | Transportation | Subscriptions | Other",
+    "monthlyAmount": 0.0,
+    "dueDay": 1,
+    "startDate": "yyyy-MM-dd",
+    "frequency": "Monthly",
+    "status": "Active | Paused",
+    "note": "string | null",
+    "occurrences": [
+      {
+        "id": "guid",
+        "referencePeriod": { "year": 0, "month": 1 },
+        "dueDate": "yyyy-MM-dd",
+        "status": "Pending",
+        "expectedAmount": 0.0,
+        "name": "string",
+        "category": "Housing | Services | Transportation | Subscriptions | Other"
+      }
+    ]
+  },
+  "errors": null
 }
 ```
 
-`occurrences` deve conter exatamente 0 ou 1 item: 1 item se `status` enviado
-for `"Active"` (RF10), 0 itens se `"Paused"` (RF11) — espelhando
+`data.occurrences` deve conter exatamente 0 ou 1 item: 1 item se `status`
+enviado for `"Active"` (RF10), 0 itens se `"Paused"` (RF11) — espelhando
 `GetOccurrences()` do agregado `RecurringExpense`.
 
-**Response — `400 Bad Request`** (falha de validação de negócio)
+**Response — `400 Bad Request`** (falha de validação de negócio ou de
+forma/presença — mesmo envelope para as duas origens)
 
 ```json
 {
+  "success": false,
+  "data": null,
   "errors": [
     { "field": "name", "message": "string" }
   ]
 }
 ```
 
-Um item por regra violada (RF02–RF08), permitindo à tela destacar o campo
-correspondente. O formato exato (nomes de campo, estrutura do envelope de
-erro) deve ser alinhado com o padrão de erro já adotado pela API do projeto,
-caso já exista; nenhum padrão de erro de API foi encontrado neste repositório
-no momento deste refinamento.
+Um item por regra violada (RF02–RF08) ou por campo malformado/ausente,
+permitindo à tela destacar o campo correspondente.
+
+**Response — `500 Internal Server Error`**
+
+```json
+{
+  "success": false,
+  "data": null,
+  "errors": [
+    { "field": null, "message": "Ocorreu um erro inesperado. Tente novamente mais tarde." }
+  ]
+}
+```
+
+Produzida pelo middleware global de tratamento de exceções da API para
+qualquer falha não tratada (ex.: banco de dados indisponível) — nenhum
+detalhe interno da exceção é exposto no corpo.
 
 **Fora do escopo destes endpoints / desta tela**
 - Listagem de despesas recorrentes ou ocorrências (painel mensal).
@@ -315,7 +342,7 @@ no momento deste refinamento.
   fixo no cliente nesta iteração (ver "Pontos em aberto"); gestão do
   catálogo de categorias via API (se um dia existir) é uma feature à parte.
 
-Este contrato é uma especificação para orientar uma futura feature de
-backend (camada de Aplicação/API) e **não implica nenhuma criação de
-controller, DTO ou rota nesta etapa** — apenas o projeto `Domain` (já
-refinado separadamente) existe hoje no backend.
+Este endpoint está implementado em `backend/Api` (feature
+`004-api-despesa-recorrente`); a integração do frontend com ele (troca do
+dublê/mock atual do `DespesaRecorrenteService` pela chamada HTTP real) é
+trabalho de uma feature de frontend à parte, ainda não realizada.

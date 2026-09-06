@@ -48,7 +48,7 @@ public sealed class OccurrenceConfigurations : IEntityTypeConfiguration<Occurren
         builder.Property<Money>("_expectedAmount")
             .HasColumnName("ExpectedAmount")
             .HasConversion(vo => vo.GetValue(), value => new Money(value))
-            .HasColumnType("decimal(18,2)")
+            .HasPrecision(18, 2)
             .IsRequired();
     }
 }

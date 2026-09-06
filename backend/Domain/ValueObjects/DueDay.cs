@@ -8,7 +8,7 @@ public sealed class DueDay
     {
         if (value is < 1 or > 31)
         {
-            throw new ArgumentException("Due day must be between 1 and 31.", nameof(value));
+            throw new ArgumentException("O dia de vencimento deve estar entre 1 e 31.", nameof(value));
         }
 
         _value = value;
