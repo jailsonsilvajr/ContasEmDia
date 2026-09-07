@@ -186,7 +186,15 @@ nenhum tipo ou abstração nova.
 `{ path: 'despesas/nova', component: CadastroDespesaRecorrenteComponent }`
 — e trocar `app.config.ts`/`app.html`/`app.ts` para usar
 `provideRouter(routes)` + `<router-outlet />`, em vez do componente único
-hoje fixado em `app.html`.
+hoje fixado em `app.html`. As setas de navegação de mês e o botão "Nova
+despesa" do design (FR-020/FR-021 — ver "Clarifications" de `spec.md`,
+sessão 2026-09-07) ganham comportamento real: cada seta chama um método do
+componente (`mesAnterior()`/`proximoMes()`) que calcula a competência de
+destino a partir do `referencePeriod` atual, atualiza o signal e recarrega
+via `painel-mensal-despesas.service.ts` (`GET /api/v1/occurrences` com o
+novo `year`/`month`, já suportado pelo endpoint desde o desenho original —
+FR-002/RF02); o botão "Nova despesa" usa `routerLink="/despesas/nova"` do
+próprio `@angular/router` já introduzido nesta seção.
 
 **Rationale**: Hoje `App` monta `<app-cadastro-despesa-recorrente />`
 diretamente (única tela existente até esta feature). Introduzir a tela de
@@ -196,10 +204,14 @@ declarada em `package.json` (apenas ainda não utilizada), então não há
 nenhuma dependência npm nova a justificar perante o AI Agent Guardrails da
 constituição. É o mínimo necessário — duas rotas, sem guards, resolvers ou
 lazy loading, já que nenhum deles tem justificativa concreta nesta etapa
-(Princípio V). O botão "Nova despesa" e as setas de navegação de mês do
-design permanecem sem `onClick`, exatamente como no protótipo (RF02/RF03 do
-refinamento os declaram fora de escopo) — a rota `despesas/nova` fica
-alcançável por URL, mas nada dentro da tela do painel ainda link a ela.
+(Princípio V). Uma versão anterior deste documento (antes da clarificação
+de 2026-09-07) assumia que as setas e o botão "Nova despesa" ficariam sem
+`onClick`, por a spec então tratá-los apenas como uma Assumption implícita;
+a spec agora os formaliza como FR-020/FR-021, então implementá-los é a
+única leitura consistente com o Technical Context desta feature — nenhuma
+rota, endpoint ou dependência nova é necessária para isso, apenas dois
+handlers de clique no componente já planejado e um `routerLink` no mesmo
+router já introduzido por esta seção.
 
 **Alternatives considered**: Substituir simplesmente o conteúdo de
 `app.html` pelo painel, descartando a tela de cadastro do ponto de

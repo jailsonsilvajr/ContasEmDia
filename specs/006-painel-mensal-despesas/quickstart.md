@@ -143,6 +143,19 @@ clicar "Marcar como paga" em uma delas e, sem confirmar/cancelar, clicar
 estado normal (rascunho descartado, sem chamada `PATCH` disparada para
 ela), a segunda entra em edição.
 
+## Cenário 10 — Navegação de mês e botão "Nova despesa" (FR-020/FR-021)
+
+Somente via UI: com o painel carregado, clicar na seta "próximo mês" e
+depois na seta "mês anterior". **Resultado esperado**: o cabeçalho e a
+lista recarregam para a competência de destino a cada clique (mesma
+chamada `GET /api/v1/occurrences?year=&month=` do Cenário 1, agora com os
+parâmetros da competência vizinha), voltando exatamente à competência
+original após o segundo clique. Em seguida, clicar em "Nova despesa".
+**Resultado esperado**: a URL do navegador muda para
+`http://localhost:4200/despesas/nova` e a tela de cadastro já existente é
+exibida — o comportamento do formulário de cadastro em si permanece fora
+do escopo desta feature.
+
 ## Rodando os testes automatizados
 
 ```bash
@@ -164,6 +177,8 @@ testes de `Occurrence`/`RecurringExpense` (Domain.Tests) para as regras de
 
 Frontend: cobre o cálculo de status derivado exibido, os banners
 condicionais, os três totais, o fluxo de marcar/desfazer pagamento
-(incluindo os casos de substituição silenciosa e edição exclusiva) e
-acessibilidade básica (operabilidade via teclado do botão "Desfazer",
-labels dos campos de edição).
+(incluindo os casos de substituição silenciosa e edição exclusiva),
+navegação de mês (`mesAnterior()`/`proximoMes()` recarregando a competência
+correta — FR-020) e o `routerLink` de "Nova despesa" para `/despesas/nova`
+(FR-021), e acessibilidade básica (operabilidade via teclado do botão
+"Desfazer", labels dos campos de edição).

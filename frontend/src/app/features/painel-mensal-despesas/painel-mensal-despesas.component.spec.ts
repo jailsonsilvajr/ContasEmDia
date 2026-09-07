@@ -1,9 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { Router, provideRouter } from '@angular/router';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { PainelMensalDespesasComponent } from './painel-mensal-despesas.component';
+import { routes } from '../../app.routes';
 import type {
   ApiEnvelope,
   GetMonthlyPanelResponse,
@@ -37,7 +39,7 @@ describe('PainelMensalDespesasComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [PainelMensalDespesasComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter(routes)],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });
@@ -398,5 +400,140 @@ describe('PainelMensalDespesasComponent', () => {
 
     const row = compiled.querySelector('[data-testid="occurrence-row"]');
     expect(row?.textContent).toContain('Pendente');
+  });
+
+  it('clicking "próximo mês" reloads with the next month in the same year', () => {
+    const fixture = createAndFlush({
+      success: true,
+      data: { referencePeriod: { year: 2026, month: 8 }, occurrences: [] },
+      errors: null,
+    });
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    (compiled.querySelector('[data-testid="mes-proximo-btn"]') as HTMLButtonElement).click();
+
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/occurrences');
+    expect(req.request.params.get('year')).toBe('2026');
+    expect(req.request.params.get('month')).toBe('9');
+
+    req.flush({
+      success: true,
+      data: { referencePeriod: { year: 2026, month: 9 }, occurrences: [] },
+      errors: null,
+    });
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('[data-testid="mes-atual-label"]')?.textContent).toContain('Setembro 2026');
+  });
+
+  it('clicking "mês anterior" reloads with the previous month in the same year', () => {
+    const fixture = createAndFlush({
+      success: true,
+      data: { referencePeriod: { year: 2026, month: 8 }, occurrences: [] },
+      errors: null,
+    });
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    (compiled.querySelector('[data-testid="mes-anterior-btn"]') as HTMLButtonElement).click();
+
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/occurrences');
+    expect(req.request.params.get('year')).toBe('2026');
+    expect(req.request.params.get('month')).toBe('7');
+
+    req.flush({
+      success: true,
+      data: { referencePeriod: { year: 2026, month: 7 }, occurrences: [] },
+      errors: null,
+    });
+  });
+
+  it('clicking "mês anterior" from January rolls back to December of the previous year', () => {
+    const fixture = createAndFlush({
+      success: true,
+      data: { referencePeriod: { year: 2026, month: 1 }, occurrences: [] },
+      errors: null,
+    });
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    (compiled.querySelector('[data-testid="mes-anterior-btn"]') as HTMLButtonElement).click();
+
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/occurrences');
+    expect(req.request.params.get('year')).toBe('2025');
+    expect(req.request.params.get('month')).toBe('12');
+
+    req.flush({
+      success: true,
+      data: { referencePeriod: { year: 2025, month: 12 }, occurrences: [] },
+      errors: null,
+    });
+  });
+
+  it('clicking "próximo mês" from December rolls forward to January of the next year', () => {
+    const fixture = createAndFlush({
+      success: true,
+      data: { referencePeriod: { year: 2026, month: 12 }, occurrences: [] },
+      errors: null,
+    });
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    (compiled.querySelector('[data-testid="mes-proximo-btn"]') as HTMLButtonElement).click();
+
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/occurrences');
+    expect(req.request.params.get('year')).toBe('2027');
+    expect(req.request.params.get('month')).toBe('1');
+
+    req.flush({
+      success: true,
+      data: { referencePeriod: { year: 2027, month: 1 }, occurrences: [] },
+      errors: null,
+    });
+  });
+
+  it('clicking "próximo mês" then "mês anterior" returns exactly to the original competência', () => {
+    const fixture = createAndFlush({
+      success: true,
+      data: { referencePeriod: { year: 2026, month: 8 }, occurrences: [] },
+      errors: null,
+    });
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    (compiled.querySelector('[data-testid="mes-proximo-btn"]') as HTMLButtonElement).click();
+    httpMock.expectOne((r) => r.url === '/api/v1/occurrences').flush({
+      success: true,
+      data: { referencePeriod: { year: 2026, month: 9 }, occurrences: [] },
+      errors: null,
+    });
+    fixture.detectChanges();
+
+    (compiled.querySelector('[data-testid="mes-anterior-btn"]') as HTMLButtonElement).click();
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/occurrences');
+    expect(req.request.params.get('year')).toBe('2026');
+    expect(req.request.params.get('month')).toBe('8');
+    req.flush({
+      success: true,
+      data: { referencePeriod: { year: 2026, month: 8 }, occurrences: [] },
+      errors: null,
+    });
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('[data-testid="mes-atual-label"]')?.textContent).toContain('Agosto 2026');
+  });
+
+  it('the "Nova despesa" button is associated with routerLink="/despesas/nova"', () => {
+    const fixture = createAndFlush({
+      success: true,
+      data: { referencePeriod: { year: 2026, month: 8 }, occurrences: [] },
+      errors: null,
+    });
+
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    (compiled.querySelector('[data-testid="nova-despesa-btn"]') as HTMLButtonElement).click();
+
+    expect(navigateSpy).toHaveBeenCalled();
+    const navigatedUrl = navigateSpy.mock.calls[0][0];
+    expect(String(navigatedUrl)).toBe('/despesas/nova');
   });
 });

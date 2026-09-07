@@ -261,3 +261,12 @@ de exibição (rótulo/cor de status, flags `isEditing`/`paid`/`notPaid`),
 `totalPrevisto`/`totalPago`/`totalPendente`, `vencidasCount`/
 `venceEmBreveCount`/`totalAVencer` — mesma fórmula de `renderVals()` no
 protótipo, agora sobre dados vindos da API em vez do array fixo de exemplo.
+
+Métodos novos de navegação (FR-020/FR-021 — ver `research.md` §7):
+`mesAnterior()`/`proximoMes()` calculam a competência de destino a partir
+de `referencePeriod()` (um mês antes/depois, com virada de ano), atualizam
+o signal `referencePeriod` e chamam `painel-mensal-despesas.service.ts`
+novamente para recarregar `occurrences` a partir da nova competência
+(mesmo endpoint `GET /api/v1/occurrences?year=&month=` já usado na carga
+inicial — nenhum endpoint novo). O botão "Nova despesa" não tem estado de
+componente próprio — é um `routerLink="/despesas/nova"` no template.

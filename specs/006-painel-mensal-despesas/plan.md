@@ -9,7 +9,9 @@
 ## Summary
 
 Entregar a tela "Painel mensal" (`design/Main.dc.html`) com dados reais,
-seguindo fielmente o design de referência: cabeçalho de competência, dois
+seguindo fielmente o design de referência: cabeçalho de competência com
+setas de navegação de mês funcionais e o botão "Nova despesa" (FR-020/
+FR-021 — ver "Clarifications" de `spec.md`, sessão 2026-09-07), dois
 banners condicionais (vencidas / vence em breve), três cartões de resumo,
 lista de ocorrências e o fluxo completo de marcar/desfazer pagamento com
 edição inline exclusiva. Isso exige, pela primeira vez neste repositório,
@@ -89,7 +91,10 @@ endpoints HTTP novos (`GET /api/v1/occurrences`,
 métodos de negócio novos em `Occurrence` + 3 métodos novos em
 `RecurringExpense`, 3 métodos novos em `IRecurringExpenseRepository`, 1
 migration EF Core nova, 1 rota Angular nova (`app.routes.ts`, 2 rotas:
-painel e cadastro).
+painel e cadastro), 2 métodos novos de navegação no componente do painel
+(`mesAnterior()`/`proximoMes()`, FR-020, reaproveitando o endpoint `GET`
+já existente) e 1 `routerLink` no botão "Nova despesa" (FR-021, sem
+endpoint ou rota novos além da já planejada `despesas/nova`).
 
 ## Constitution Check
 
@@ -101,7 +106,7 @@ painel e cadastro).
 | II — Test-First Development | PASS (a verificar na implementação/`tasks.md`). Backend: `WebApplicationFactory`, um teste por cenário de `ProducesResponseType`, sem pasta de testes dedicada além da já existente (`Api.Tests/Controllers`). Frontend: Vitest, cobertura das regras de status derivado, edição exclusiva, banners condicionais e acessibilidade (labels, `role="alert"`, operabilidade via teclado do botão "Desfazer" — ver `research.md` §8). |
 | III — Type Safety & Static Analysis | PASS. C# com nullable + warnings-as-errors (já configurado nos projetos existentes); TypeScript strict, sem `any` novo. |
 | IV — Secure Handling of Financial Data | PASS sob a exceção de fase vigente — nenhuma auth/CORS nova, comportamento inalterado. |
-| V — Simplicity & Incremental Delivery | PASS. Sem paginação (fora de escopo por decisão da spec), sem biblioteca de Unit of Work nova (reutiliza o padrão repositório-chama-`SaveChangesAsync` já usado por `AddAsync`), sem nova hierarquia de exceções além de um único tipo (`DomainRuleViolationException`) justificado por uma necessidade concreta e presente — ver `research.md` §5. Roteamento Angular introduzido com o mínimo necessário (2 rotas), usando uma dependência já presente no projeto. |
+| V — Simplicity & Incremental Delivery | PASS. Sem paginação (fora de escopo por decisão da spec), sem biblioteca de Unit of Work nova (reutiliza o padrão repositório-chama-`SaveChangesAsync` já usado por `AddAsync`), sem nova hierarquia de exceções além de um único tipo (`DomainRuleViolationException`) justificado por uma necessidade concreta e presente — ver `research.md` §5. Roteamento Angular introduzido com o mínimo necessário (2 rotas), usando uma dependência já presente no projeto. Navegação de mês (FR-020) e botão "Nova despesa" (FR-021) reaproveitam, respectivamente, o mesmo endpoint `GET` já existente e o mesmo router já introduzido — dois métodos de componente e um `routerLink`, nenhuma rota, endpoint ou dependência nova. |
 | VI — DDD no Domain | PASS. `Occurrence` ganha métodos de intenção de negócio (`MarkAsPaid`, `UndoPayment`, `GetDerivedStatus`) em vez de setters; novo Value Object `OccurrenceDerivedStatus` segue exatamente o mesmo padrão de todo enum já existente no Domain (wrapper validando `Enum.IsDefined`); toda exceção de regra de negócio nova carrega mensagem PT-BR; construtor privado de EF Core de `Occurrence` não é afetado. |
 | VII — Infrastructure Layer | PASS. `IRecurringExpenseRepository` ganha 3 métodos novos, implementados em `RecurringExpenseRepository`; nova migration aditiva (não altera migrations existentes); `OccurrenceConfigurations` ganha mapeamento das 2 colunas novas; nenhum Unit of Work novo introduzido (`UpdateAsync` apenas chama `SaveChangesAsync()`, mesmo padrão de `AddAsync`). |
 | VIII — Angular Standalone Architecture & Project Structure | PASS. Nova feature em pasta própria (`features/painel-mensal-despesas/`), componentes standalone, Tailwind para estilo (mesma convenção de `cadastro-despesa-recorrente`, cores fora do tema compartilhado usadas via classes arbitrárias `bg-[#hex]`, mesmo padrão já em uso). |
