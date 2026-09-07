@@ -9,6 +9,6 @@ export class DespesaRecorrenteService {
   private readonly http = inject(HttpClient);
 
   create(payload: CreateRecurringExpenseRequest): Observable<CreateRecurringExpenseResponse> {
-    return this.http.post<CreateRecurringExpenseResponse>('/api/recurring-expenses', payload);
+    return this.http.post<CreateRecurringExpenseResponse>('/api/v1/recurring-expenses', payload);
   }
 }

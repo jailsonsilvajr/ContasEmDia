@@ -33,7 +33,7 @@ describe('DespesaRecorrenteService', () => {
     httpMock.verify();
   });
 
-  it('POSTs to /api/recurring-expenses with the given payload and resolves on 201', () => {
+  it('POSTs to /api/v1/recurring-expenses with the given payload and resolves on 201', () => {
     const response: CreateRecurringExpenseResponse = {
       id: 'abc-123',
       name: payload.name,
@@ -50,7 +50,7 @@ describe('DespesaRecorrenteService', () => {
     let result: CreateRecurringExpenseResponse | undefined;
     service.create(payload).subscribe((res) => (result = res));
 
-    const req = httpMock.expectOne('/api/recurring-expenses');
+    const req = httpMock.expectOne('/api/v1/recurring-expenses');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(payload);
     req.flush(response, { status: 201, statusText: 'Created' });
@@ -65,7 +65,7 @@ describe('DespesaRecorrenteService', () => {
       error: (err) => (error = err),
     });
 
-    const req = httpMock.expectOne('/api/recurring-expenses');
+    const req = httpMock.expectOne('/api/v1/recurring-expenses');
     req.flush(
       { errors: [{ field: 'name', message: 'Nome é obrigatório.' }] },
       { status: 400, statusText: 'Bad Request' },
@@ -82,7 +82,7 @@ describe('DespesaRecorrenteService', () => {
       error: (err) => (error = err),
     });
 
-    const req = httpMock.expectOne('/api/recurring-expenses');
+    const req = httpMock.expectOne('/api/v1/recurring-expenses');
     req.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
 
     expect(error).toBeDefined();

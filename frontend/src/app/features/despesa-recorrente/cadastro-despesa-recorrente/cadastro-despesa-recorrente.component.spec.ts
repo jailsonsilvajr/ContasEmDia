@@ -52,7 +52,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
     fixture.detectChanges();
 
-    const req = httpMock.expectOne('/api/recurring-expenses');
+    const req = httpMock.expectOne('/api/v1/recurring-expenses');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
       name: 'Aluguel',
@@ -91,7 +91,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
     fixture.detectChanges();
 
-    const req = httpMock.expectOne('/api/recurring-expenses');
+    const req = httpMock.expectOne('/api/v1/recurring-expenses');
     req.flush(
       {
         id: 'abc-123',
@@ -135,7 +135,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
     fixture.detectChanges();
 
-    const req = httpMock.expectOne('/api/recurring-expenses');
+    const req = httpMock.expectOne('/api/v1/recurring-expenses');
     expect(req.request.body.frequency).toBe('Monthly');
     expect(req.request.body.status).toBe('Active');
     req.flush(
@@ -276,7 +276,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     expect(root.querySelector('[data-testid="data-inicio-error"]')).toBeTruthy();
     expect(root.querySelector('[data-testid="corrigir-banner"]')).toBeTruthy();
 
-    httpMock.expectNone('/api/recurring-expenses');
+    httpMock.expectNone('/api/v1/recurring-expenses');
   });
 
   it('shows the error banner and retains all field values on a network/5xx failure (US4-1, FR-015, SC-004)', () => {
@@ -285,7 +285,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
     fixture.detectChanges();
 
-    const req = httpMock.expectOne('/api/recurring-expenses');
+    const req = httpMock.expectOne('/api/v1/recurring-expenses');
     req.flush('Internal Server Error', { status: 500, statusText: 'Internal Server Error' });
     fixture.detectChanges();
 
@@ -304,7 +304,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
     fixture.detectChanges();
 
-    const firstReq = httpMock.expectOne('/api/recurring-expenses');
+    const firstReq = httpMock.expectOne('/api/v1/recurring-expenses');
     const firstBody = firstReq.request.body;
     firstReq.flush('Internal Server Error', { status: 500, statusText: 'Internal Server Error' });
     fixture.detectChanges();
@@ -312,7 +312,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     root.querySelector<HTMLButtonElement>('[data-testid="tentar-novamente-btn"]')!.click();
     fixture.detectChanges();
 
-    const secondReq = httpMock.expectOne('/api/recurring-expenses');
+    const secondReq = httpMock.expectOne('/api/v1/recurring-expenses');
     expect(secondReq.request.body).toEqual(firstBody);
     secondReq.flush(
       {
@@ -337,7 +337,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
     fixture.detectChanges();
 
-    const req = httpMock.expectOne('/api/recurring-expenses');
+    const req = httpMock.expectOne('/api/v1/recurring-expenses');
     req.flush(
       { errors: [{ field: 'name', message: 'Já existe uma despesa recorrente com esse nome.' }] },
       { status: 400, statusText: 'Bad Request' },
@@ -359,7 +359,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
     fixture.detectChanges();
 
-    const req = httpMock.expectOne('/api/recurring-expenses');
+    const req = httpMock.expectOne('/api/v1/recurring-expenses');
     expect(req.request.body.note).toBe('Pagamento via cartão');
     req.flush(
       {
@@ -388,6 +388,6 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     salvarBtn.click();
     fixture.detectChanges();
 
-    httpMock.expectOne('/api/recurring-expenses');
+    httpMock.expectOne('/api/v1/recurring-expenses');
   });
 });
