@@ -178,4 +178,129 @@ public sealed class RecurringExpenseRepositoryTests
 
         Assert.DoesNotContain(pausedExpense.GetId(), active.Select(e => e.GetId()));
     }
+
+    [Fact]
+    public async Task GetByReferencePeriodAsync_ActiveAndPausedExpensesWithOccurrenceInPeriod_ReturnsBoth()
+    {
+        var activeExpense = CreateExpense(
+            status: RecurringExpenseStatusType.Active,
+            startDate: new DateOnly(2026, 8, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        // An expense only generates an occurrence while Active at construction
+        // time; RF20 requires an expense later paused to keep showing occurrences
+        // it already generated. There is no public mutation for status yet, so
+        // we simulate "was active, generated an occurrence, then got paused" via
+        // reflection on the private field, matching the pattern already used for
+        // OccurrenceTests's Paid-state setup.
+        var pausedExpense = CreateExpense(
+            status: RecurringExpenseStatusType.Active,
+            startDate: new DateOnly(2026, 8, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+        typeof(RecurringExpense)
+            .GetField("_status", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .SetValue(pausedExpense, new RecurringExpenseStatus(RecurringExpenseStatusType.Paused));
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repository = new RecurringExpenseRepository(context);
+            await repository.AddAsync(activeExpense);
+            await repository.AddAsync(pausedExpense);
+        }
+
+        await using var queryContext = _fixture.CreateContext();
+        var repositoryUnderTest = new RecurringExpenseRepository(queryContext);
+
+        var matching = await repositoryUnderTest.GetByReferencePeriodAsync(new ReferencePeriod(2026, 8));
+
+        var matchingIds = matching.Select(e => e.GetId()).ToList();
+        Assert.Contains(activeExpense.GetId(), matchingIds);
+        Assert.Contains(pausedExpense.GetId(), matchingIds);
+    }
+
+    [Fact]
+    public async Task GetByReferencePeriodAsync_PeriodWithNoOccurrences_ReturnsEmptyCollection()
+    {
+        var expense = CreateExpense(
+            status: RecurringExpenseStatusType.Active,
+            startDate: new DateOnly(2026, 8, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repository = new RecurringExpenseRepository(context);
+            await repository.AddAsync(expense);
+        }
+
+        await using var queryContext = _fixture.CreateContext();
+        var repositoryUnderTest = new RecurringExpenseRepository(queryContext);
+
+        var matching = await repositoryUnderTest.GetByReferencePeriodAsync(new ReferencePeriod(2020, 1));
+
+        Assert.Empty(matching);
+    }
+
+    [Fact]
+    public async Task GetByOccurrenceIdAsync_ExistingOccurrenceId_ReturnsOwningRecurringExpense()
+    {
+        var expense = CreateExpense();
+        var occurrence = expense.GetOccurrences().Single();
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repository = new RecurringExpenseRepository(context);
+            await repository.AddAsync(expense);
+        }
+
+        await using var queryContext = _fixture.CreateContext();
+        var repositoryUnderTest = new RecurringExpenseRepository(queryContext);
+
+        var retrieved = await repositoryUnderTest.GetByOccurrenceIdAsync(occurrence.GetId());
+
+        Assert.NotNull(retrieved);
+        Assert.Equal(expense.GetId(), retrieved.GetId());
+    }
+
+    [Fact]
+    public async Task GetByOccurrenceIdAsync_NonExistentOccurrenceId_ReturnsNull()
+    {
+        await using var context = _fixture.CreateContext();
+        var repository = new RecurringExpenseRepository(context);
+
+        var retrieved = await repository.GetByOccurrenceIdAsync(Guid.NewGuid());
+
+        Assert.Null(retrieved);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_MutatedTrackedAggregate_PersistsMutation()
+    {
+        var expense = CreateExpense();
+        var occurrence = expense.GetOccurrences().Single();
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repository = new RecurringExpenseRepository(context);
+            await repository.AddAsync(expense);
+        }
+
+        await using var updateContext = _fixture.CreateContext();
+        var updateRepository = new RecurringExpenseRepository(updateContext);
+        var trackedExpense = await updateRepository.GetByIdAsync(expense.GetId());
+        var trackedOccurrence = trackedExpense!.FindOccurrence(occurrence.GetId())!;
+
+        var paidAmount = new Money(1500m);
+        var paymentDate = new CalendarDate(new DateOnly(2026, 8, 5));
+        trackedExpense.MarkOccurrenceAsPaid(trackedOccurrence.GetId(), paidAmount, paymentDate);
+
+        await updateRepository.UpdateAsync(trackedExpense);
+
+        await using var verifyContext = _fixture.CreateContext();
+        var verifyRepository = new RecurringExpenseRepository(verifyContext);
+        var verified = await verifyRepository.GetByIdAsync(expense.GetId());
+        var verifiedOccurrence = verified!.FindOccurrence(occurrence.GetId())!;
+
+        Assert.Equal(paidAmount.GetValue(), verifiedOccurrence.GetPaidAmount()!.GetValue());
+        Assert.Equal(paymentDate.GetValue(), verifiedOccurrence.GetPaymentDate()!.GetValue());
+    }
 }

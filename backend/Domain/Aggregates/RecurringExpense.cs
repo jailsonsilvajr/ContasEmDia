@@ -90,4 +90,28 @@ public sealed class RecurringExpense
     public Note GetNote() => _note;
 
     public IReadOnlyCollection<Occurrence> GetOccurrences() => _occurrences;
+
+    public IReadOnlyCollection<Occurrence> GetOccurrencesForPeriod(ReferencePeriod referencePeriod) =>
+        _occurrences
+            .Where(occurrence =>
+                occurrence.GetReferencePeriod().Year == referencePeriod.Year &&
+                occurrence.GetReferencePeriod().Month == referencePeriod.Month)
+            .ToList();
+
+    public Occurrence? FindOccurrence(Guid occurrenceId) =>
+        _occurrences.FirstOrDefault(occurrence => occurrence.GetId() == occurrenceId);
+
+    public void MarkOccurrenceAsPaid(Guid occurrenceId, Money paidAmount, CalendarDate paymentDate)
+    {
+        var occurrence = FindOccurrence(occurrenceId) ?? throw new KeyNotFoundException("Ocorrência não encontrada.");
+
+        occurrence.MarkAsPaid(paidAmount, paymentDate);
+    }
+
+    public void UndoOccurrencePayment(Guid occurrenceId)
+    {
+        var occurrence = FindOccurrence(occurrenceId) ?? throw new KeyNotFoundException("Ocorrência não encontrada.");
+
+        occurrence.UndoPayment();
+    }
 }

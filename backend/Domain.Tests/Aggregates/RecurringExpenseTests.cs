@@ -101,4 +101,95 @@ public class RecurringExpenseTests
 
         Assert.Empty(expense.GetOccurrences());
     }
+
+    [Fact]
+    public void GetOccurrencesForPeriod_PeriodMatchingGeneratedOccurrence_ReturnsThatOccurrence()
+    {
+        var expense = CreateExpense(currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        var occurrences = expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 8));
+
+        Assert.Single(occurrences);
+        Assert.Equal(expense.GetOccurrences().Single().GetId(), occurrences.Single().GetId());
+    }
+
+    [Fact]
+    public void GetOccurrencesForPeriod_PeriodWithNoOccurrences_ReturnsEmpty()
+    {
+        var expense = CreateExpense(currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        var occurrences = expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 9));
+
+        Assert.Empty(occurrences);
+    }
+
+    [Fact]
+    public void FindOccurrence_ExistingId_ReturnsOccurrence()
+    {
+        var expense = CreateExpense(currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrence = expense.GetOccurrences().Single();
+
+        var found = expense.FindOccurrence(occurrence.GetId());
+
+        Assert.NotNull(found);
+        Assert.Equal(occurrence.GetId(), found.GetId());
+    }
+
+    [Fact]
+    public void FindOccurrence_NonExistentId_ReturnsNull()
+    {
+        var expense = CreateExpense(currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        var found = expense.FindOccurrence(Guid.NewGuid());
+
+        Assert.Null(found);
+    }
+
+    [Fact]
+    public void MarkOccurrenceAsPaid_ExistingId_DelegatesToOccurrence()
+    {
+        var expense = CreateExpense(currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrence = expense.GetOccurrences().Single();
+        var paidAmount = new Money(1500m);
+        var paymentDate = new CalendarDate(new DateOnly(2026, 8, 5));
+
+        expense.MarkOccurrenceAsPaid(occurrence.GetId(), paidAmount, paymentDate);
+
+        Assert.Equal(paidAmount.GetValue(), occurrence.GetPaidAmount()!.GetValue());
+        Assert.Equal(paymentDate.GetValue(), occurrence.GetPaymentDate()!.GetValue());
+    }
+
+    [Fact]
+    public void MarkOccurrenceAsPaid_NonExistentId_ThrowsKeyNotFoundException()
+    {
+        var expense = CreateExpense(currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        var exception = Assert.Throws<KeyNotFoundException>(
+            () => expense.MarkOccurrenceAsPaid(Guid.NewGuid(), new Money(1500m), new CalendarDate(new DateOnly(2026, 8, 5))));
+
+        Assert.Equal("Ocorrência não encontrada.", exception.Message);
+    }
+
+    [Fact]
+    public void UndoOccurrencePayment_ExistingPaidId_DelegatesToOccurrence()
+    {
+        var expense = CreateExpense(currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrence = expense.GetOccurrences().Single();
+        expense.MarkOccurrenceAsPaid(occurrence.GetId(), new Money(1500m), new CalendarDate(new DateOnly(2026, 8, 5)));
+
+        expense.UndoOccurrencePayment(occurrence.GetId());
+
+        Assert.Null(occurrence.GetPaidAmount());
+        Assert.Null(occurrence.GetPaymentDate());
+    }
+
+    [Fact]
+    public void UndoOccurrencePayment_NonExistentId_ThrowsKeyNotFoundException()
+    {
+        var expense = CreateExpense(currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        var exception = Assert.Throws<KeyNotFoundException>(() => expense.UndoOccurrencePayment(Guid.NewGuid()));
+
+        Assert.Equal("Ocorrência não encontrada.", exception.Message);
+    }
 }

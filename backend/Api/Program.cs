@@ -3,6 +3,9 @@ using ContasEmDia.Api.Middlewares;
 using ContasEmDia.Api.Responses;
 using ContasEmDia.Application.Ports;
 using ContasEmDia.Application.UseCases.CreateRecurringExpense;
+using ContasEmDia.Application.UseCases.GetMonthlyPanel;
+using ContasEmDia.Application.UseCases.MarkOccurrenceAsPaid;
+using ContasEmDia.Application.UseCases.UndoOccurrencePayment;
 using ContasEmDia.Domain.Repositories;
 using ContasEmDia.Infrastructure;
 using ContasEmDia.Infrastructure.Contexts;
@@ -16,6 +19,9 @@ builder.Services.AddDbContext<ContasEmDiaDbContext>(options =>
 
 builder.Services.AddScoped<IRepositoryManager, RepositoryManager>();
 builder.Services.AddScoped<ICreateRecurringExpenseUseCase, CreateRecurringExpenseUseCase>();
+builder.Services.AddScoped<IGetMonthlyPanelUseCase, GetMonthlyPanelUseCase>();
+builder.Services.AddScoped<IMarkOccurrenceAsPaidUseCase, MarkOccurrenceAsPaidUseCase>();
+builder.Services.AddScoped<IUndoOccurrencePaymentUseCase, UndoOccurrencePaymentUseCase>();
 builder.Services.AddSingleton<ICurrentDateProvider, SystemCurrentDateProvider>();
 
 builder.Services.AddControllers();
@@ -30,7 +36,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
                 new ApiError(Field: JsonNamingPolicy.CamelCase.ConvertName(entry.Key), Message: error.ErrorMessage)))
             .ToList();
 
-        return new BadRequestObjectResult(ApiResponse<CreateRecurringExpenseDataResponse>.Failure(errors));
+        return new BadRequestObjectResult(ApiResponse<object>.Failure(errors));
     };
 });
 

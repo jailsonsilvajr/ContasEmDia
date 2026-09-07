@@ -1,5 +1,6 @@
 using System.Net;
 using ContasEmDia.Api.Responses;
+using ContasEmDia.Domain;
 
 namespace ContasEmDia.Api.Middlewares;
 
@@ -18,15 +19,27 @@ public sealed class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (DomainRuleViolationException ex)
+        {
+            await WriteErrorAsync(context, HttpStatusCode.BadRequest, ex.Message);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            await WriteErrorAsync(context, HttpStatusCode.NotFound, ex.Message);
+        }
         catch (Exception)
         {
-            var response = ApiResponse<object>.Failure(
-                [new ApiError(Field: null, Message: "Ocorreu um erro inesperado. Tente novamente mais tarde.")]);
-
-            context.Response.ContentType = "application/json";
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-
-            await context.Response.WriteAsJsonAsync(response);
+            await WriteErrorAsync(context, HttpStatusCode.InternalServerError, "Ocorreu um erro inesperado. Tente novamente mais tarde.");
         }
+    }
+
+    private static async Task WriteErrorAsync(HttpContext context, HttpStatusCode statusCode, string message)
+    {
+        var response = ApiResponse<object>.Failure([new ApiError(Field: null, Message: message)]);
+
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)statusCode;
+
+        await context.Response.WriteAsJsonAsync(response);
     }
 }
