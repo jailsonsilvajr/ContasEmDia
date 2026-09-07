@@ -1,0 +1,180 @@
+<div class="min-h-screen bg-[#FAFAF8] font-sans text-[#101828]">
+  <div class="mx-auto max-w-[1040px] px-8 pt-10 pb-20">
+
+    <div class="mb-7 flex items-center justify-between border-b border-border-light pb-6">
+      <div class="flex items-center gap-2.5">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#2E6FF2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M8 12.5l2.5 2.5 5.5-6"></path>
+        </svg>
+        <span class="font-heading text-xl font-bold tracking-tight">ContasEmDia</span>
+      </div>
+      <div class="flex items-center gap-3.5">
+        <div class="flex items-center gap-1 rounded-[10px] border border-border-light bg-white px-2 py-1.5">
+          <button type="button" data-testid="mes-anterior-btn" class="flex h-[26px] w-[26px] items-center justify-center rounded-md border-none bg-transparent p-0" aria-label="Mês anterior">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+          </button>
+          <span class="font-heading px-1.5 text-sm font-semibold whitespace-nowrap" data-testid="mes-atual-label">{{ monthLabel() }}</span>
+          <button type="button" data-testid="mes-proximo-btn" class="flex h-[26px] w-[26px] items-center justify-center rounded-md border-none bg-transparent p-0" aria-label="Próximo mês">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+          </button>
+        </div>
+        <button type="button" data-testid="nova-despesa-btn" class="flex items-center gap-2 rounded-[10px] border-none bg-accent px-4 py-2.5 text-sm font-semibold text-white">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+          Nova despesa
+        </button>
+      </div>
+    </div>
+
+    <div class="mb-7 flex flex-wrap gap-4">
+      @if (hasVencidas()) {
+        <div class="flex min-w-[240px] flex-1 items-center gap-3 rounded-xl border border-[#F7C8C2] bg-[#FDECEA] p-4" role="alert" data-testid="banner-vencidas">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#C0362C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true">
+            <path d="M10.3 3.9l-8 14A1.5 1.5 0 0 0 3.6 20h16.8a1.5 1.5 0 0 0 1.3-2.1l-8-14a1.5 1.5 0 0 0-2.6 0z"></path>
+            <path d="M12 9v4"></path><path d="M12 16.5v.01"></path>
+          </svg>
+          <div>
+            <div class="text-sm font-bold text-[#7A2118]">{{ vencidasCount() }} conta(s) vencida(s)</div>
+            <div class="mt-0.5 text-[13px] text-[#9B4A3F]">Regularize o quanto antes.</div>
+          </div>
+        </div>
+      }
+      @if (hasVenceEmBreve()) {
+        <div class="flex min-w-[240px] flex-1 items-center gap-3 rounded-xl border border-[#F5DDA0] bg-[#FFF6E5] p-4" role="alert" data-testid="banner-vence-em-breve">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#9A6300" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path>
+          </svg>
+          <div>
+            <div class="text-sm font-bold text-[#6B4A00]">{{ venceEmBreveCount() }} conta(s) vencendo em 7 dias</div>
+            <div class="mt-0.5 text-[13px] text-[#8A6100]">Total a vencer no período: {{ totalAVencerFmt() }}</div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="rounded-[14px] border border-border-light bg-white p-5">
+        <div class="text-xs font-semibold tracking-wide text-muted uppercase">Total previsto no mês</div>
+        <div class="font-heading mt-2 text-[26px] font-extrabold" data-testid="total-previsto">{{ totalPrevistoFmt() }}</div>
+      </div>
+      <div class="rounded-[14px] border border-border-light bg-white p-5">
+        <div class="text-xs font-semibold tracking-wide text-muted uppercase">Total pago</div>
+        <div class="font-heading mt-2 text-[26px] font-extrabold text-success" data-testid="total-pago">{{ totalPagoFmt() }}</div>
+      </div>
+      <div class="rounded-[14px] border border-border-light bg-white p-5">
+        <div class="text-xs font-semibold tracking-wide text-muted uppercase">Total pendente</div>
+        <div class="font-heading mt-2 text-[26px] font-extrabold" data-testid="total-pendente">{{ totalPendenteFmt() }}</div>
+      </div>
+    </div>
+
+    <div class="mb-3.5 flex items-baseline justify-between">
+      <h2 class="font-heading m-0 text-lg font-bold">Contas de {{ monthLabel() }}</h2>
+      <span class="text-[13px] text-muted" data-testid="item-count">{{ itemCount() }} contas</span>
+    </div>
+
+    <div class="flex flex-col gap-2.5">
+      @for (item of displayItems(); track item.id) {
+        <div class="flex flex-wrap items-center gap-4 rounded-xl border border-border-light bg-white px-5 py-4" data-testid="occurrence-row">
+
+          <div class="flex min-w-[180px] flex-1 items-center gap-1.5">
+            <span class="h-2 w-2 shrink-0 rounded-full" [style.background]="item.catColor"></span>
+            <span class="text-[15px] font-bold">{{ item.nome }}</span>
+            <span class="text-[13px] text-muted">· {{ item.categoria }}</span>
+          </div>
+
+          <div class="font-heading w-[110px] text-right text-[15px] font-bold">{{ item.valorPrevistoFmt }}</div>
+
+          <div class="w-[70px] text-center text-[13px] text-muted">{{ item.diaLabel }}</div>
+
+          <div class="flex w-[150px] justify-center">
+            <span
+              class="rounded-full px-3 py-1.5 text-xs font-bold whitespace-nowrap"
+              [style.background]="item.statusBg"
+              [style.color]="item.statusColor"
+              >{{ item.statusLabel }}</span
+            >
+          </div>
+
+          <div class="flex w-[210px] justify-end">
+            @if (!item.isEditing) {
+              @if (item.notPaid) {
+                <button
+                  type="button"
+                  data-testid="marcar-paga-btn"
+                  class="rounded-lg border-[1.5px] border-accent bg-white px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap text-accent"
+                  (click)="iniciarPagamento(item.id)"
+                >
+                  Marcar como paga
+                </button>
+              }
+              @if (item.paid) {
+                <div class="text-right">
+                  @if (item.valorDiferente) {
+                    <div class="text-sm font-bold text-[#9A6300]">{{ item.valorPagoFmt }}</div>
+                    <div class="text-[11px] text-[#9A6300]">diferente do previsto</div>
+                  } @else {
+                    <div class="text-sm font-bold text-success">{{ item.valorPagoFmt }}</div>
+                  }
+                  <div class="mt-0.5 text-xs text-muted">pago em {{ item.dataPagamentoLabel }}</div>
+                  <button
+                    type="button"
+                    data-testid="desfazer-btn"
+                    class="mt-1 inline-block cursor-pointer border-none bg-transparent p-0 text-[12px] text-accent underline"
+                    (click)="desfazerPagamento(item.id)"
+                  >
+                    Desfazer
+                  </button>
+                </div>
+              }
+            } @else {
+              <div class="flex w-[190px] flex-col items-end gap-1.5" data-testid="edicao-pagamento">
+                <div class="flex w-full items-center gap-1.5">
+                  <label [attr.for]="'draft-valor-' + item.id" class="text-xs text-muted">R$</label>
+                  <input
+                    [id]="'draft-valor-' + item.id"
+                    type="text"
+                    data-testid="draft-valor-input"
+                    class="flex-1 rounded-md border border-[#D0D5DD] px-2 py-1.5 text-[13px]"
+                    [value]="draftValor()"
+                    (input)="onDraftValorInput($event)"
+                    aria-label="Valor pago"
+                  />
+                </div>
+                <input
+                  [id]="'draft-data-' + item.id"
+                  type="text"
+                  data-testid="draft-data-input"
+                  class="w-full rounded-md border border-[#D0D5DD] px-2 py-1.5 text-[13px]"
+                  placeholder="dd/mm/aaaa"
+                  [value]="draftData()"
+                  (input)="onDraftDataInput($event)"
+                  aria-label="Data do pagamento"
+                />
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    data-testid="confirmar-btn"
+                    class="rounded-md border-none bg-accent px-3 py-1.5 text-[13px] font-semibold text-white"
+                    (click)="confirmarPagamento(item.id)"
+                  >
+                    Confirmar
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="cancelar-btn"
+                    class="rounded-md border-none bg-transparent px-2 py-1.5 text-[13px] text-muted"
+                    (click)="cancelarEdicao()"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
+        </div>
+      }
+    </div>
+
+  </div>
+</div>

@@ -100,6 +100,15 @@ namespace ContasEmDia.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("Name");
 
+                    b.Property<decimal?>("_paidAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("PaidAmount");
+
+                    b.Property<DateOnly?>("_paymentDate")
+                        .HasColumnType("date")
+                        .HasColumnName("PaymentDate");
+
                     b.Property<int>("_status")
                         .HasColumnType("integer")
                         .HasColumnName("Status");

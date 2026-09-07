@@ -28,4 +28,21 @@ internal sealed class InMemoryRecurringExpenseRepository : IRecurringExpenseRepo
 
         return Task.FromResult(active);
     }
+
+    public Task<IReadOnlyCollection<RecurringExpense>> GetByReferencePeriodAsync(ReferencePeriod referencePeriod)
+    {
+        IReadOnlyCollection<RecurringExpense> matching = _store.Values
+            .Where(expense => expense.GetOccurrencesForPeriod(referencePeriod).Count > 0)
+            .ToList();
+
+        return Task.FromResult(matching);
+    }
+
+    public Task<RecurringExpense?> GetByOccurrenceIdAsync(Guid occurrenceId)
+    {
+        var recurringExpense = _store.Values.FirstOrDefault(expense => expense.FindOccurrence(occurrenceId) is not null);
+        return Task.FromResult(recurringExpense);
+    }
+
+    public Task UpdateAsync(RecurringExpense recurringExpense) => Task.CompletedTask;
 }

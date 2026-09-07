@@ -50,5 +50,15 @@ public sealed class OccurrenceConfigurations : IEntityTypeConfiguration<Occurren
             .HasConversion(vo => vo.GetValue(), value => new Money(value))
             .HasPrecision(18, 2)
             .IsRequired();
+
+        builder.Property<Money?>("_paidAmount")
+            .HasColumnName("PaidAmount")
+            .HasConversion(vo => vo == null ? (decimal?)null : vo.GetValue(), value => value == null ? null : new Money(value.Value))
+            .HasPrecision(18, 2);
+
+        builder.Property<CalendarDate?>("_paymentDate")
+            .HasColumnName("PaymentDate")
+            .HasConversion(vo => vo == null ? (DateOnly?)null : vo.GetValue(), value => value == null ? null : new CalendarDate(value.Value))
+            .HasColumnType("date");
     }
 }
