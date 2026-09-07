@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { PainelMensalDespesasService } from './painel-mensal-despesas.service';
 import {
@@ -63,7 +64,7 @@ export interface PanelDisplayItem {
 
 @Component({
   selector: 'app-painel-mensal-despesas',
-  imports: [],
+  imports: [RouterLink],
   templateUrl: './painel-mensal-despesas.component.html',
 })
 export class PainelMensalDespesasComponent implements OnInit {
@@ -151,6 +152,14 @@ export class PainelMensalDespesasComponent implements OnInit {
     this.load();
   }
 
+  mesAnterior(): void {
+    this.loadPeriod(this.shiftPeriod(-1));
+  }
+
+  proximoMes(): void {
+    this.loadPeriod(this.shiftPeriod(1));
+  }
+
   iniciarPagamento(occurrenceId: string): void {
     const occurrence = this.occurrences().find((item) => item.id === occurrenceId);
     if (!occurrence) return;
@@ -199,6 +208,24 @@ export class PainelMensalDespesasComponent implements OnInit {
 
   private replaceOccurrence(updated: PanelOccurrenceResponse): void {
     this.occurrences.update((items) => items.map((item) => (item.id === updated.id ? updated : item)));
+  }
+
+  private shiftPeriod(delta: number): { year: number; month: number } {
+    const period = this.referencePeriod();
+    const totalMonths = (period ? period.year * 12 + (period.month - 1) : 0) + delta;
+    return { year: Math.floor(totalMonths / 12), month: (totalMonths % 12) + 1 };
+  }
+
+  private loadPeriod(period: { year: number; month: number }): void {
+    this.painelService.getMonthlyPanel(String(period.year), String(period.month)).subscribe({
+      next: (envelope) => {
+        if (envelope.success && envelope.data) {
+          this.referencePeriod.set(envelope.data.referencePeriod);
+          this.occurrences.set(envelope.data.occurrences);
+        }
+      },
+      error: () => undefined,
+    });
   }
 
   private load(): void {

@@ -172,6 +172,30 @@ Projeto web já existente (não um projeto novo): `backend/{Domain,Domain.Tests,
 
 ---
 
+## Phase 7: Navegação de mês e botão "Nova despesa" (FR-020/FR-021)
+
+**Purpose**: Fechar a lacuna aberta pela clarificação de `spec.md` (sessão 2026-09-07): as setas de navegação de mês e o botão "Nova despesa" deixam de ficar sem `onClick` (decisão original de T025/`research.md` §7, hoje superada) e passam a ser controles funcionais, conforme `plan.md`/`research.md` §7/`data-model.md` já atualizados. Nenhum endpoint, rota ou dependência nova é introduzida — esta fase reaproveita o `GET /api/v1/occurrences` já existente (FR-002) e o `@angular/router` já introduzido em T027–T029.
+
+**Goal**: Ao clicar na seta "mês anterior"/"próximo mês", o painel recarrega para a competência vizinha (FR-020); ao clicar em "Nova despesa", o usuário é levado para `/despesas/nova` (FR-021).
+
+**Independent Test**: Com o painel carregado, clicar "próximo mês" e depois "mês anterior" e confirmar que a competência exibida (cabeçalho, lista, totais) volta exatamente ao ponto de partida a cada clique (`quickstart.md`, Cenário 10); clicar "Nova despesa" e confirmar que a URL muda para `/despesas/nova` e a tela de cadastro já existente aparece.
+
+### Tests for Phase 7 (escrever antes da implementação — TDD)
+
+- [X] T072 [P] [US1] Adicionar a `frontend/src/app/features/painel-mensal-despesas/painel-mensal-despesas.component.spec.ts` testes de `mesAnterior()`/`proximoMes()`: cada clique dispara nova chamada a `painel-mensal-despesas.service.ts` com o `year`/`month` da competência vizinha (mês anterior e próximo mês dentro do mesmo ano; janeiro → dezembro do ano anterior; dezembro → janeiro do ano seguinte)
+- [X] T073 [P] [US1] Adicionar ao mesmo arquivo um teste confirmando que o botão "Nova despesa" está associado a `routerLink="/despesas/nova"` (mesmo padrão de teste de roteamento já usado em `frontend/src/app/app.spec.ts`)
+
+### Implementation for Phase 7
+
+- [X] T074 [US1] Adicionar `mesAnterior()`/`proximoMes()` a `painel-mensal-despesas.component.ts`: calculam a competência de destino a partir do signal `referencePeriod()` (mês -1/+1, com virada de ano), atualizam `referencePeriod` e chamam `painel-mensal-despesas.service.ts` novamente para recarregar `occurrences` (depende de T072)
+- [X] T075 [US1] Conectar as duas setas de navegação em `painel-mensal-despesas.component.html` a `(click)="mesAnterior()"`/`(click)="proximoMes()"`, mantendo exatamente a aparência já implementada em T025 (nenhuma mudança de marcação/estilo, apenas o binding de clique) (depende de T074)
+- [X] T076 [US1] Adicionar `RouterLink` aos `imports` standalone de `PainelMensalDespesasComponent` e aplicar `routerLink="/despesas/nova"` ao botão "Nova despesa" em `painel-mensal-despesas.component.html`, sem alterar sua aparência visual (depende de T073, T027)
+- [X] T077 [US1] Executar o Cenário 10 de `quickstart.md` manualmente (navegação de mês ida e volta + clique em "Nova despesa") e confirmar que o resultado bate exatamente com o documentado (depende de T075, T076)
+
+**Checkpoint**: Painel com navegação de mês e acesso a "Nova despesa" totalmente funcionais, sem regressão em US1/US2/US3 nem na tela de cadastro já existente.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -182,12 +206,14 @@ Projeto web já existente (não um projeto novo): `backend/{Domain,Domain.Tests,
 - **User Story 2 (Phase 4)**: depende de Foundational; reutiliza `PainelMensalDespesasComponent`/serviço criados em US1 (mesmos arquivos, editados de forma incremental) — logicamente depende de US1 estar completa antes de começar, já que estende o mesmo componente e a mesma tabela de ações
 - **User Story 3 (Phase 5)**: depende de Foundational; reutiliza `FindOccurrence`/`GetByOccurrenceIdAsync`/`UpdateAsync`/middleware introduzidos em US2 — depende de US2 estar completa
 - **Polish (Phase 6)**: depende de todas as user stories completas
+- **Fase 7 — Navegação de mês / "Nova despesa" (FR-020/FR-021)**: depende de User Story 1 (Phase 3) — estende o mesmo `PainelMensalDespesasComponent` e reutiliza a rota `despesas/nova` (T027) já criados ali; não depende de US2, US3 nem de Polish (Phase 6), podendo rodar em paralelo com elas
 
 ### User Story Dependencies
 
 - **US1 (P1)**: independente após Foundational
 - **US2 (P2)**: tecnicamente independente em termos de regra de negócio, mas reutiliza arquivos criados por US1 (`OccurrencesController`, `painel-mensal-despesas.component.ts/html`, `painel-mensal-despesas.service.ts`) — implementar após US1
 - **US3 (P3)**: reutiliza `DomainRuleViolationException`, o middleware estendido e `GetByOccurrenceIdAsync`/`UpdateAsync` introduzidos em US2 — implementar após US2
+- **Fase 7 (FR-020/FR-021)**: reutiliza o `PainelMensalDespesasComponent` de US1 e a rota `despesas/nova` de US1 — implementar após US1; independente de US2/US3
 
 ### Within Each User Story
 
@@ -202,6 +228,7 @@ Projeto web já existente (não um projeto novo): `backend/{Domain,Domain.Tests,
 - T016/T018 (records de Input/Output e de Response) em paralelo entre si
 - T042/T044, T058/T060 (mesma forma nas demais stories) igualmente paralelizáveis
 - Tarefas de frontend `[P]` que tocam arquivos `.spec.ts` diferentes dos arquivos de implementação podem ser preparadas em paralelo com a implementação correspondente, desde que a implementação já exista para o teste rodar
+- T072/T073 (testes de navegação de mês e de `routerLink` de "Nova despesa", Fase 7) podem ser escritos em paralelo — mesmo arquivo (`painel-mensal-despesas.component.spec.ts`), mas blocos de teste independentes sem dependência entre si
 
 ---
 
@@ -238,6 +265,7 @@ Task: "GetMonthlyPanelDataResponse/PanelOccurrenceDataResponse em backend/Api/Re
 3. US2 → testar independentemente → demo (marcar como paga)
 4. US3 → testar independentemente → demo (desfazer pagamento)
 5. Polish → validação final ponta a ponta contra `design/Main.dc.html` e `quickstart.md`
+6. Fase 7 → testar independentemente → demo (navegação de mês funcional + acesso a "Nova despesa", FR-020/FR-021) — pode ser feita a qualquer momento após US1, inclusive em paralelo com US2/US3/Polish
 
 ---
 
@@ -248,5 +276,6 @@ Task: "GetMonthlyPanelDataResponse/PanelOccurrenceDataResponse em backend/Api/Re
 - Testes devem ser escritos e falhar antes da implementação (Princípio II — Test-First)
 - Nenhuma migration existente é alterada — apenas uma migration aditiva nova (T007)
 - O único desvio de fidelidade literal ao markup do design é o botão "Desfazer" (`<button>` em vez de `<span onClick>`), documentado em `research.md` §8 e aplicado em T064
+- T025 originalmente implementou as setas de navegação de mês e o botão "Nova despesa" sem `onClick`, por decisão da spec então vigente; a clarificação de `spec.md` (sessão 2026-09-07, FR-020/FR-021) reverteu essa decisão — a Fase 7 (T072–T077) fecha essa lacuna sem reabrir ou renumerar T025
 - Commit após cada tarefa ou grupo lógico de tarefas
 - Parar em cada checkpoint para validar a story isoladamente antes de seguir

@@ -29,6 +29,10 @@ GET /api/v1/occurrences                # competência atual (FR-002)
 GET /api/v1/occurrences?year=2026&month=8
 ```
 
+As setas de navegação de mês do painel (FR-020) reutilizam exatamente este
+mesmo endpoint, apenas variando `year`/`month` para a competência de
+destino — nenhum endpoint novo é necessário para a navegação entre meses.
+
 ### Response — `200 OK`
 
 ```json

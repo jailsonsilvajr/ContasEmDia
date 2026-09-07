@@ -11,15 +11,15 @@
       </div>
       <div class="flex items-center gap-3.5">
         <div class="flex items-center gap-1 rounded-[10px] border border-border-light bg-white px-2 py-1.5">
-          <button type="button" data-testid="mes-anterior-btn" class="flex h-[26px] w-[26px] items-center justify-center rounded-md border-none bg-transparent p-0" aria-label="Mês anterior">
+          <button type="button" data-testid="mes-anterior-btn" class="flex h-[26px] w-[26px] items-center justify-center rounded-md border-none bg-transparent p-0" aria-label="Mês anterior" (click)="mesAnterior()">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
           </button>
           <span class="font-heading px-1.5 text-sm font-semibold whitespace-nowrap" data-testid="mes-atual-label">{{ monthLabel() }}</span>
-          <button type="button" data-testid="mes-proximo-btn" class="flex h-[26px] w-[26px] items-center justify-center rounded-md border-none bg-transparent p-0" aria-label="Próximo mês">
+          <button type="button" data-testid="mes-proximo-btn" class="flex h-[26px] w-[26px] items-center justify-center rounded-md border-none bg-transparent p-0" aria-label="Próximo mês" (click)="proximoMes()">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
           </button>
         </div>
-        <button type="button" data-testid="nova-despesa-btn" class="flex items-center gap-2 rounded-[10px] border-none bg-accent px-4 py-2.5 text-sm font-semibold text-white">
+        <button type="button" data-testid="nova-despesa-btn" class="flex items-center gap-2 rounded-[10px] border-none bg-accent px-4 py-2.5 text-sm font-semibold text-white" routerLink="/despesas/nova">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
           Nova despesa
         </button>

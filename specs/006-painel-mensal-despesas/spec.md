@@ -8,6 +8,20 @@
 
 **Input**: User description: "Feature: Painel mensal de despesas seguindo o refinamento @refinements/painel-mensal-despesas.md e seguindo totalmente o desing já definido em @design/Main.dc.html"
 
+## Clarifications
+
+### Session 2026-09-07
+
+- Q: As setas de navegação de mês e o botão "Nova despesa" fazem parte do
+  escopo desta feature? Se o botão "Nova despesa" fizer parte do escopo,
+  ele deve abrir e concluir o fluxo completo de cadastro de uma despesa
+  recorrente, ou apenas navegar para uma tela de cadastro que é
+  responsabilidade de outra feature? → A: Ambos os controles (setas de
+  navegação de mês e botão "Nova despesa") fazem parte do escopo desta
+  feature; o botão "Nova despesa" apenas navega para a rota
+  `/despesas/nova` — o fluxo de cadastro em si permanece fora do escopo
+  desta especificação.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Visualizar o painel mensal de uma competência (Priority: P1)
@@ -253,6 +267,15 @@ que a ação "Marcar como paga" volta a ficar disponível para ela.
   pertencente a um conjunto fechado e conhecido; uma ocorrência cuja
   categoria não seja reconhecida MUST ser exibida com uma indicação visual
   neutra padrão em vez de falhar ou ficar sem indicação.
+- **FR-020**: O sistema MUST exibir controles de navegação de competência
+  (seta "mês anterior" e seta "próximo mês") no painel; ao acionar um
+  desses controles, o sistema MUST disparar uma nova consulta do painel
+  para a competência de destino (mês anterior ou próximo mês em relação à
+  competência atualmente exibida), conforme FR-002.
+- **FR-021**: O sistema MUST exibir um botão "Nova despesa" no painel; ao
+  ser acionado, o sistema MUST navegar o usuário para a rota
+  `/despesas/nova`. O comportamento do fluxo de cadastro de despesa
+  recorrente nessa rota está fora do escopo desta especificação.
 
 ### Key Entities
 
@@ -297,10 +320,10 @@ que a ação "Marcar como paga" volta a ficar disponível para ela.
 
 ## Assumptions
 
-- A navegação entre meses (setas "mês anterior"/"próximo mês") é assumida
-  como uma nova consulta de painel para a competência de destino (FR-002);
-  o design de referência não define limites de quantos meses para
-  trás/frente podem ser consultados, e nenhum limite é assumido nesta
+- A navegação entre meses (setas "mês anterior"/"próximo mês", FR-020)
+  dispara uma nova consulta de painel para a competência de destino
+  (FR-002); o design de referência não define limites de quantos meses
+  para trás/frente podem ser consultados, e nenhum limite é assumido nesta
   especificação.
 - A confirmação de pagamento com valor ou data inválidos/em branco usa
   substituição silenciosa pelos padrões (valor previsto / data atual),
@@ -319,7 +342,11 @@ que a ação "Marcar como paga" volta a ficar disponível para ela.
 - O cadastro, a edição e a exclusão de despesas recorrentes, assim como
   frequências diferentes de mensal, estão fora do escopo desta
   especificação — cobrem apenas a visualização do painel mensal e as ações
-  de marcar/desfazer pagamento de uma ocorrência já existente.
+  de marcar/desfazer pagamento de uma ocorrência já existente. O botão
+  "Nova despesa" do painel (FR-021) está em escopo apenas quanto à sua
+  presença e ao disparo da navegação para `/despesas/nova`; o comportamento
+  da tela/fluxo de cadastro em si permanece fora do escopo desta
+  especificação.
 - O contrato técnico exato (rotas, formatos de requisição/resposta, códigos
   de status) da consulta de dados do painel e das ações de marcar/desfazer
   pagamento fica para a fase de planejamento técnico desta feature, não
