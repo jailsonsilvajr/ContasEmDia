@@ -39,6 +39,15 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ContasEmDiaDbContext>();
+    if (dbContext.Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL")
+    {
+        dbContext.Database.Migrate();
+    }
+}
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseSwagger();
