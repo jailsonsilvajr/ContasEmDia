@@ -30,6 +30,23 @@ o layout do design usando Tailwind (mesma convenção já usada por
 roteamento (Angular Router, já uma dependência do projeto) para que o
 painel e o cadastro coexistam como duas telas navegáveis.
 
+**Adendo 2026-09-08** (FR-022 a FR-030, ver "Clarifications" de `spec.md`,
+sessão 2026-09-08): um conjunto de requisitos transversais de UX foi
+acrescentado à spec e é coberto por este mesmo plano, sem nenhum endpoint,
+rota ou dependência nova — cursor de mão em elementos clicáveis (excluindo
+desabilitados), responsividade do painel em 720px/480px, máscara de moeda
+e seletor de data nativo nos campos monetário/data das duas telas, e
+exibição de todos os valores monetários em Euro (€). Conforme a
+clarificação de 2026-09-08, a ação "Voltar ao painel" (com confirmação
+condicional a dados não salvos) e as duas ações da tela de sucesso do
+cadastro (FR-023–FR-025) são implementadas dentro desta feature,
+alterando diretamente o componente `CadastroDespesaRecorrenteComponent` já
+entregue pela feature 002 (`cadastro-despesa-recorrente`) — a única vez em
+que esta feature toca um componente fora da pasta
+`features/painel-mensal-despesas/`. Ver `research.md` §9–§14 e
+`data-model.md` ("Frontend — UX transversais acrescentadas em
+2026-09-08") para as decisões técnicas completas.
+
 ## Technical Context
 
 **Language/Version**: C# / .NET 10 (Domain, Application, Infrastructure,
@@ -82,7 +99,14 @@ explícito, Princípio IV); acessibilidade WCAG 2.1 AA em todo componente
 novo (Princípio II), o que exige um pequeno desvio de fidelidade literal ao
 markup do protótipo — ver `research.md` §8 (o link "Desfazer" do design é
 um `<span onClick>`, não operável via teclado; a implementação real usa um
-`<button>` com a mesma aparência visual).
+`<button>` com a mesma aparência visual); nenhuma mudança de contrato de
+API para os requisitos de UX de 2026-09-08 — o seletor de data nativo
+(FR-029) mantém o mesmo formato de string já trafegado com o backend em
+cada tela (`dd/MM/yyyy` no painel, ISO no cadastro — conversão feita
+inteiramente no cliente, `research.md` §12); estilo exclusivamente via
+utility classes Tailwind (Princípio VIII), inclusive para o requisito de
+cursor de mão (FR-022) — nenhuma regra CSS global solta é introduzida,
+ver `research.md` §9.
 
 **Scale/Scope**: 1 tela nova no frontend (`painel-mensal-despesas`), 3
 endpoints HTTP novos (`GET /api/v1/occurrences`,
@@ -96,6 +120,23 @@ painel e cadastro), 2 métodos novos de navegação no componente do painel
 já existente) e 1 `routerLink` no botão "Nova despesa" (FR-021, sem
 endpoint ou rota novos além da já planejada `despesas/nova`).
 
+**Adendo 2026-09-08 (FR-022 a FR-030)**: nenhum endpoint, rota de API,
+UseCase, migration ou dependência nova. 1 pasta nova no frontend
+(`frontend/src/app/shared/`) com 2 utilitários puros novos
+(`maskCurrencyDigits`, `formatEUR`, ver `research.md` §10–§11), consumidos
+por `painel-mensal-despesas.component.ts` (substituindo `formatBRL`
+local) e por `cadastro-despesa-recorrente.component.ts` (substituindo
+`Intl.NumberFormat(...BRL...)`). 2 campos de data trocam de `type="text"`
+para `type="date"` (`draftData` no painel, `dataInicio` no cadastro — ver
+`research.md` §12). `CadastroDespesaRecorrenteComponent` ganha 1 computed
+(`hasUnsavedData`), 1 signal (`showExitConfirmDialog`) e 3 métodos novos
+(`onClickVoltar`/`onCancelExit`/`onConfirmExit`), mais o botão "Voltar ao
+painel" na tela de sucesso (`routerLink="/"`, ao lado do já existente
+"Cadastrar outra despesa"). Classes utilitárias Tailwind (`cursor-pointer`,
+`disabled:cursor-default`, variantes arbitrárias `max-[720px]:`/
+`min-[481px]:max-[720px]:`/`max-[480px]:`) são acrescentadas nos templates
+das duas telas — sem novo arquivo de configuração Tailwind.
+
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
@@ -106,10 +147,10 @@ endpoint ou rota novos além da já planejada `despesas/nova`).
 | II — Test-First Development | PASS (a verificar na implementação/`tasks.md`). Backend: `WebApplicationFactory`, um teste por cenário de `ProducesResponseType`, sem pasta de testes dedicada além da já existente (`Api.Tests/Controllers`). Frontend: Vitest, cobertura das regras de status derivado, edição exclusiva, banners condicionais e acessibilidade (labels, `role="alert"`, operabilidade via teclado do botão "Desfazer" — ver `research.md` §8). |
 | III — Type Safety & Static Analysis | PASS. C# com nullable + warnings-as-errors (já configurado nos projetos existentes); TypeScript strict, sem `any` novo. |
 | IV — Secure Handling of Financial Data | PASS sob a exceção de fase vigente — nenhuma auth/CORS nova, comportamento inalterado. |
-| V — Simplicity & Incremental Delivery | PASS. Sem paginação (fora de escopo por decisão da spec), sem biblioteca de Unit of Work nova (reutiliza o padrão repositório-chama-`SaveChangesAsync` já usado por `AddAsync`), sem nova hierarquia de exceções além de um único tipo (`DomainRuleViolationException`) justificado por uma necessidade concreta e presente — ver `research.md` §5. Roteamento Angular introduzido com o mínimo necessário (2 rotas), usando uma dependência já presente no projeto. Navegação de mês (FR-020) e botão "Nova despesa" (FR-021) reaproveitam, respectivamente, o mesmo endpoint `GET` já existente e o mesmo router já introduzido — dois métodos de componente e um `routerLink`, nenhuma rota, endpoint ou dependência nova. |
+| V — Simplicity & Incremental Delivery | PASS. Sem paginação (fora de escopo por decisão da spec), sem biblioteca de Unit of Work nova (reutiliza o padrão repositório-chama-`SaveChangesAsync` já usado por `AddAsync`), sem nova hierarquia de exceções além de um único tipo (`DomainRuleViolationException`) justificado por uma necessidade concreta e presente — ver `research.md` §5. Roteamento Angular introduzido com o mínimo necessário (2 rotas), usando uma dependência já presente no projeto. Navegação de mês (FR-020) e botão "Nova despesa" (FR-021) reaproveitam, respectivamente, o mesmo endpoint `GET` já existente e o mesmo router já introduzido — dois métodos de componente e um `routerLink`, nenhuma rota, endpoint ou dependência nova. Adendo 2026-09-08: a pasta `frontend/src/app/shared/` nova é o mínimo necessário para reaproveitar `maskCurrencyDigits`/`formatEUR` entre as duas telas sem duplicar a lógica nem criar uma dependência de uma feature sobre a outra (`research.md` §10); nenhuma migration, endpoint ou dependência nova; a mudança de `type="text"` para `type="date"` nos dois campos de data na verdade *simplifica* `cadastro-despesa-recorrente.component.ts` (remove `parseDataInicio`/`toIsoDate`, `research.md` §12). |
 | VI — DDD no Domain | PASS. `Occurrence` ganha métodos de intenção de negócio (`MarkAsPaid`, `UndoPayment`, `GetDerivedStatus`) em vez de setters; novo Value Object `OccurrenceDerivedStatus` segue exatamente o mesmo padrão de todo enum já existente no Domain (wrapper validando `Enum.IsDefined`); toda exceção de regra de negócio nova carrega mensagem PT-BR; construtor privado de EF Core de `Occurrence` não é afetado. |
 | VII — Infrastructure Layer | PASS. `IRecurringExpenseRepository` ganha 3 métodos novos, implementados em `RecurringExpenseRepository`; nova migration aditiva (não altera migrations existentes); `OccurrenceConfigurations` ganha mapeamento das 2 colunas novas; nenhum Unit of Work novo introduzido (`UpdateAsync` apenas chama `SaveChangesAsync()`, mesmo padrão de `AddAsync`). |
-| VIII — Angular Standalone Architecture & Project Structure | PASS. Nova feature em pasta própria (`features/painel-mensal-despesas/`), componentes standalone, Tailwind para estilo (mesma convenção de `cadastro-despesa-recorrente`, cores fora do tema compartilhado usadas via classes arbitrárias `bg-[#hex]`, mesmo padrão já em uso). |
+| VIII — Angular Standalone Architecture & Project Structure | PASS. Nova feature em pasta própria (`features/painel-mensal-despesas/`), componentes standalone, Tailwind para estilo (mesma convenção de `cadastro-despesa-recorrente`, cores fora do tema compartilhado usadas via classes arbitrárias `bg-[#hex]`, mesmo padrão já em uso). Adendo 2026-09-08: `frontend/src/app/shared/` guarda apenas utilitários puros sem UI (não é uma pasta "components/" técnica genérica, nem um `NgModule`); cursor de mão (FR-022) e breakpoints (FR-026/FR-027) usam exclusivamente utility classes/variantes arbitrárias Tailwind (`cursor-pointer`, `disabled:cursor-default`, `max-[720px]:`, `min-[481px]:max-[720px]:`, `max-[480px]:`) — nenhuma regra CSS global solta em `styles.css` nem SCSS por componente (`research.md` §9/§13). |
 | IX — Signal-Based Reactivity & HTTP Access | PASS. Estado do componente (`occurrences`, `editingId`, rascunhos de edição) em `signal`/`computed`; `HttpClient` injetado via `inject()` em um serviço `providedIn: 'root'`. |
 | X — Dependency Injection & Frontend Coding Standards | PASS. `inject()` em vez de injeção por construtor; nomes de arquivo seguindo convenção (`*.component.ts`, `*.service.ts`); inputs/signals tratados como imutáveis (atualizações via `set`/`update`). |
 | XI — Application Layer Implementation | PASS. 3 UseCases novos, cada um em sua própria pasta com `I<Nome>UseCase`/`<Nome>UseCase`/Input/Output dedicados; UseCases apenas orquestram (buscam o agregado, chamam o método de negócio, chamam `UpdateAsync`/persistem); nenhuma regra de negócio nova implementada na Application (a substituição de valor/data em branco é preenchimento de padrão de orquestração, não uma regra de invariante — a regra "não pode marcar como paga uma ocorrência já paga" continua exclusivamente no Domain). Application continua dependendo apenas do Domain. |
@@ -125,6 +166,13 @@ existente, `ExceptionHandlingMiddlewareTests`, que depende de uma
 `InvalidOperationException` de persistência continuar mapeando para
 `500`, o que impede reutilizar esse tipo do BCL para o novo mapeamento de
 `400`).
+
+**Adendo 2026-09-08**: nenhuma violação identificada para FR-022 a
+FR-030. A única adição estrutural nova (pasta `frontend/src/app/shared/`)
+está justificada em `research.md` §10 por uma necessidade concreta de
+reuso entre as duas telas (Princípio V), sem criar uma pasta de camada
+técnica genérica nem um `NgModule` (Princípio VIII). `Complexity Tracking`
+permanece não aplicável.
 
 ## Project Structure
 
@@ -210,13 +258,22 @@ frontend/src/app/
 ├── app.ts                                        # MODIFICADO — RouterOutlet em vez do componente fixo
 ├── app.html                                      # MODIFICADO — <router-outlet />
 ├── app.spec.ts                                   # MODIFICADO — reflete a nova composição via router
+├── shared/                                        # NOVO (adendo 2026-09-08) — utilitários puros compartilhados entre features
+│   ├── currency-mask.util.ts                      # NOVO — maskCurrencyDigits (FR-028)
+│   ├── currency-mask.util.spec.ts                 # NOVO
+│   ├── currency-format.util.ts                    # NOVO — formatEUR (FR-030)
+│   └── currency-format.util.spec.ts               # NOVO
 └── features/
-    ├── despesa-recorrente/                       # já existe — não modificado (fora de escopo)
+    ├── despesa-recorrente/
+    │   └── cadastro-despesa-recorrente/
+    │       ├── cadastro-despesa-recorrente.component.ts    # MODIFICADO (adendo 2026-09-08) — hasUnsavedData, showExitConfirmDialog, onClickVoltar/onCancelExit/onConfirmExit, dataInicio ISO nativo, maskCurrencyDigits/formatEUR (FR-023–FR-030)
+    │       ├── cadastro-despesa-recorrente.component.html  # MODIFICADO — botão "Voltar ao painel" (cabeçalho + sucesso), modal de confirmação, type="date", cursor-pointer
+    │       └── cadastro-despesa-recorrente.component.spec.ts # MODIFICADO — cobertura dos itens acima
     └── painel-mensal-despesas/                   # NOVO
         ├── painel-mensal-despesas.model.ts
         ├── painel-mensal-despesas.service.ts
         ├── painel-mensal-despesas.service.spec.ts
-        └── painel-mensal-despesas.component.{ts,html,spec.ts}
+        └── painel-mensal-despesas.component.{ts,html,spec.ts}  # adendo 2026-09-08 (MODIFICADO após criação) — maskCurrencyDigits/formatEUR, type="date" + conversão ISO↔dd/MM/yyyy, breakpoints 720/480px, cursor-pointer (FR-022, FR-026–FR-030)
 ```
 
 **Structure Decision**: Mesma solution .NET em camadas (Domain → Application/
@@ -228,6 +285,18 @@ portanto sem violar a salvaguarda de dependências novas do AI Agent
 Guardrails), necessária para que a nova tela de painel e a tela de
 cadastro já existente continuem ambas alcançáveis a partir de `App` — ver
 `research.md` §7 para as alternativas descartadas.
+
+**Adendo 2026-09-08**: uma segunda decisão estrutural nova é a introdução
+de `frontend/src/app/shared/`, a primeira pasta de utilitários
+compartilhados do workspace Angular — necessária porque FR-028/FR-030
+exigem a mesma máscara de moeda e a mesma formatação em Euro em duas
+telas de features diferentes (`painel-mensal-despesas` e
+`despesa-recorrente/cadastro-despesa-recorrente`), e nenhuma das duas
+features deveria depender diretamente da outra apenas para reaproveitar
+um utilitário sem relação de domínio com nenhuma delas (`research.md`
+§10). Fora essa pasta nova, todas as demais mudanças de 2026-09-08 são
+edições em arquivos já existentes (nenhum componente, serviço ou rota
+nova).
 
 ## Complexity Tracking
 

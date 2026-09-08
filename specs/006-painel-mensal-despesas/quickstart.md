@@ -67,7 +67,7 @@ curl -s "https://localhost:<porta>/api/v1/occurrences?year=2020&month=1" | jq
 ```
 
 **Resultado esperado**: `200 OK`, `data.occurrences: []`. Na tela, lista
-vazia, contador "0 contas", os três cartões de resumo em R$ 0,00 e nenhum
+vazia, contador "0 contas", os três cartões de resumo em € 0,00 e nenhum
 banner.
 
 ## Cenário 3 — Período inválido (EC16/CA14)
@@ -156,6 +156,70 @@ original após o segundo clique. Em seguida, clicar em "Nova despesa".
 exibida — o comportamento do formulário de cadastro em si permanece fora
 do escopo desta feature.
 
+## Cenário 11 — Cursor de mão e exclusão de elementos desabilitados (FR-022)
+
+Somente via UI: passe o mouse sobre qualquer botão, link, seta de
+navegação, o ícone "Desfazer" e o campo de data, no painel e na tela de
+cadastro. **Resultado esperado**: cursor de mão (pointer) em todos eles.
+Em seguida, dispare um estado com um botão desabilitado (ex.: "Salvar"
+durante o envio do cadastro) e passe o mouse sobre ele. **Resultado
+esperado**: cursor padrão do sistema (não pointer).
+
+## Cenário 12 — "Voltar ao painel" na tela de cadastro, com e sem dados não salvos (FR-023/FR-024)
+
+Somente via UI: abra `/despesas/nova` sem preencher nenhum campo e clique
+em "Voltar ao painel". **Resultado esperado**: navega direto para `/`, sem
+diálogo de confirmação. Repita preenchendo ao menos um campo (ex.: "Nome")
+antes de clicar em "Voltar ao painel". **Resultado esperado**: um diálogo
+de confirmação aparece, oferecendo "Continuar editando" (fecha o diálogo,
+mantém os dados) e "Sair sem salvar" (navega para `/`, descartando os
+dados). Repita uma terceira vez preenchendo o campo "Nome" e depois
+apagando manualmente até ficar vazio novamente, então clique em "Voltar ao
+painel". **Resultado esperado**: navega direto, sem diálogo (formulário de
+volta ao estado inicial conta como "sem dados não salvos").
+
+## Cenário 13 — Duas ações na tela de sucesso do cadastro (FR-025)
+
+Somente via UI: cadastre uma despesa com sucesso em `/despesas/nova`.
+**Resultado esperado**: a tela de sucesso mostra dois botões — "Voltar ao
+painel" (navega para `/`) e "Cadastrar outra despesa" (limpa o formulário
+e volta ao estado de edição, na mesma rota `/despesas/nova`, sem
+navegação).
+
+## Cenário 14 — Responsividade do painel em 720px e 480px (FR-026/FR-027)
+
+Somente via UI: com o painel carregado em uma largura de janela ampla,
+redimensione (ou use as ferramentas de dispositivo do navegador) para
+719px. **Resultado esperado**: a grade dos três cartões de resumo passa a
+exibir 2 colunas, e cada linha da lista de ocorrências reorganiza seus
+campos em blocos empilhados (nome, depois status, valor, dia, ações).
+Redimensione para 479px. **Resultado esperado**: a grade dos três cartões
+passa a exibir 1 coluna, e os banners de alerta (quando presentes) ocupam
+a largura total.
+
+## Cenário 15 — Máscara de moeda ao digitar (FR-028)
+
+Somente via UI: no painel, inicie o registro de pagamento de uma
+ocorrência e digite `150050` no campo de valor. **Resultado esperado**: o
+campo exibe `1.500,50` conforme os dígitos são digitados, sem exigir que
+o usuário digite o ponto ou a vírgula manualmente. Repita em
+`/despesas/nova`, campo "Valor previsto mensal".
+
+## Cenário 16 — Seletor de data nativo (FR-029)
+
+Somente via UI: clique no campo de data (data de pagamento no painel;
+data de início no cadastro). **Resultado esperado**: o seletor de
+calendário nativo do navegador abre; selecionar uma data preenche o campo
+sem exigir digitação manual do texto da data.
+
+## Cenário 17 — Valores monetários em Euro (FR-030)
+
+Repita o Cenário 1 (painel) e observe qualquer valor cadastrado via
+`/despesas/nova`. **Resultado esperado**: todos os valores monetários
+exibidos (cartões de resumo, banners, itens da lista, pré-visualização do
+cadastro) usam o formato `1.234,56 €` (símbolo após o valor), nunca
+`R$`.
+
 ## Rodando os testes automatizados
 
 ```bash
@@ -181,4 +245,13 @@ condicionais, os três totais, o fluxo de marcar/desfazer pagamento
 navegação de mês (`mesAnterior()`/`proximoMes()` recarregando a competência
 correta — FR-020) e o `routerLink` de "Nova despesa" para `/despesas/nova`
 (FR-021), e acessibilidade básica (operabilidade via teclado do botão
-"Desfazer", labels dos campos de edição).
+"Desfazer", labels dos campos de edição). Cobre também, a partir da
+adição de 2026-09-08: os utilitários `maskCurrencyDigits`/`formatEUR`
+(`frontend/src/app/shared/`), `hasUnsavedData`/`onClickVoltar`/
+`onCancelExit`/`onConfirmExit` de `cadastro-despesa-recorrente.component.ts`
+(FR-023/FR-024), as duas ações da tela de sucesso (FR-025), e a conversão
+ISO↔`dd/MM/yyyy` de `confirmarPagamento` no painel (FR-029, `research.md`
+§12). Responsividade (FR-026/FR-027) e cursor de mão (FR-022) são
+validados manualmente conforme os Cenários 11/14 acima — não há
+ferramenta de teste automatizado de layout responsivo ou de estilo de
+cursor já em uso neste projeto (ver `plan.md`, "Constraints").

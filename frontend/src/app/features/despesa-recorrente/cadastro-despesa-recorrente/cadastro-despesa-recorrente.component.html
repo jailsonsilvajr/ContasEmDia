@@ -8,20 +8,39 @@
       <div class="flex-1">
         <p class="text-[15px] font-bold text-success">"{{ savedName() }}" cadastrada</p>
         <p class="mt-1 text-[13px] text-[#2E5A45]">A despesa recorrente foi registrada com sucesso.</p>
-        <button
-          type="button"
-          data-testid="nova-despesa-btn"
-          class="mt-3 rounded-lg border border-[#B7E4CC] bg-white px-3.5 py-2 text-[13px] font-semibold text-success hover:bg-[#F2F4F7]"
-          (click)="onNovaDespesa()"
-        >
-          Cadastrar outra despesa
-        </button>
+        <div class="mt-3 flex flex-wrap gap-2.5">
+          <button
+            type="button"
+            data-testid="nova-despesa-btn"
+            class="cursor-pointer rounded-lg border border-[#B7E4CC] bg-white px-3.5 py-2 text-[13px] font-semibold text-success hover:bg-[#F2F4F7]"
+            (click)="onNovaDespesa()"
+          >
+            Cadastrar outra despesa
+          </button>
+          <button
+            type="button"
+            data-testid="voltar-painel-sucesso-btn"
+            class="cursor-pointer rounded-lg border border-[#B7E4CC] bg-white px-3.5 py-2 text-[13px] font-semibold text-success hover:bg-[#F2F4F7]"
+            routerLink="/"
+          >
+            Voltar ao painel
+          </button>
+        </div>
       </div>
     </div>
   </section>
 } @else {
   <form class="mx-auto max-w-[900px] space-y-6 p-6" (submit)="$event.preventDefault(); onSalvar()">
     <div>
+      <button
+        type="button"
+        data-testid="voltar-painel-btn"
+        class="mb-3 inline-flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-[13px] font-semibold text-muted"
+        (click)="onClickVoltar()"
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+        Voltar ao painel
+      </button>
       <h1 class="font-heading text-2xl font-extrabold">Nova despesa recorrente</h1>
       <p class="mt-1.5 text-sm text-muted">
         Cadastre uma conta que se repete todo mês. A ocorrência do mês atual é gerada automaticamente.
@@ -47,7 +66,7 @@
           <button
             type="button"
             data-testid="tentar-novamente-btn"
-            class="mt-3 rounded-lg border border-[#FECDCA] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#B42318] hover:bg-[#F2F4F7]"
+            class="mt-3 cursor-pointer rounded-lg border border-[#FECDCA] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#B42318] hover:bg-[#F2F4F7]"
             (click)="onTentarNovamente()"
           >
             Tentar novamente
@@ -102,7 +121,7 @@
               [class.border-danger]="showValorError()"
               [class.border-border]="!showValorError()"
             >
-              <span class="mr-1.5 text-sm text-muted">R$</span>
+              <span class="mr-1.5 text-sm text-muted">€</span>
               <input
                 id="valor"
                 type="text"
@@ -148,10 +167,9 @@
             <label for="data-inicio" class="mb-1.5 block text-[13px] font-semibold">Data de início</label>
             <input
               id="data-inicio"
-              type="text"
-              placeholder="dd/mm/aaaa"
+              type="date"
               data-testid="data-inicio-input"
-              class="block w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+              class="block w-full cursor-pointer rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
               [class.border-danger]="showDataInicioError()"
               [class.border-border]="!showDataInicioError()"
               [attr.aria-invalid]="showDataInicioError() || null"
@@ -184,7 +202,7 @@
             <button
               type="button"
               data-testid="status-ativa-btn"
-              class="px-4 py-2 text-[13px] font-semibold"
+              class="cursor-pointer px-4 py-2 text-[13px] font-semibold"
               [class.bg-accent]="status() === 'ativa'"
               [class.text-white]="status() === 'ativa'"
               [class.text-muted]="status() !== 'ativa'"
@@ -196,7 +214,7 @@
             <button
               type="button"
               data-testid="status-pausada-btn"
-              class="border-l border-border px-4 py-2 text-[13px] font-semibold"
+              class="cursor-pointer border-l border-border px-4 py-2 text-[13px] font-semibold"
               [class.bg-accent]="status() === 'pausada'"
               [class.text-white]="status() === 'pausada'"
               [class.text-muted]="status() !== 'pausada'"
@@ -225,7 +243,7 @@
           <button
             type="submit"
             data-testid="salvar-btn"
-            class="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-default disabled:opacity-70"
+            class="cursor-pointer rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-default disabled:opacity-70"
             [disabled]="formStatus() === 'loading'"
           >
             {{ formStatus() === 'loading' ? 'Salvando…' : 'Salvar despesa' }}
@@ -245,4 +263,33 @@
       </div>
     </div>
   </form>
+
+  @if (showExitConfirmDialog()) {
+    <div class="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4" data-testid="exit-confirm-overlay">
+      <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" role="alertdialog" aria-modal="true" aria-labelledby="exit-confirm-title">
+        <p id="exit-confirm-title" class="text-[15px] font-bold">Sair sem salvar?</p>
+        <p class="mt-2 text-[13px] text-muted">
+          Você preencheu dados desta despesa que ainda não foram salvos. Se voltar ao painel agora, essas informações serão perdidas.
+        </p>
+        <div class="mt-5 flex flex-wrap justify-end gap-2.5">
+          <button
+            type="button"
+            data-testid="continuar-editando-btn"
+            class="cursor-pointer rounded-lg border border-border px-3.5 py-2 text-[13px] font-semibold text-[#344054]"
+            (click)="onCancelExit()"
+          >
+            Continuar editando
+          </button>
+          <button
+            type="button"
+            data-testid="sair-sem-salvar-btn"
+            class="cursor-pointer rounded-lg border-none bg-danger px-3.5 py-2 text-[13px] font-semibold text-white"
+            (click)="onConfirmExit()"
+          >
+            Sair sem salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 }

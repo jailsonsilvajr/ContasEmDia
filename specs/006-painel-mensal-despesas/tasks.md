@@ -279,3 +279,40 @@ Task: "GetMonthlyPanelDataResponse/PanelOccurrenceDataResponse em backend/Api/Re
 - T025 originalmente implementou as setas de navegação de mês e o botão "Nova despesa" sem `onClick`, por decisão da spec então vigente; a clarificação de `spec.md` (sessão 2026-09-07, FR-020/FR-021) reverteu essa decisão — a Fase 7 (T072–T077) fecha essa lacuna sem reabrir ou renumerar T025
 - Commit após cada tarefa ou grupo lógico de tarefas
 - Parar em cada checkpoint para validar a story isoladamente antes de seguir
+
+---
+
+## Phase 8: Convergence
+
+**Purpose**: `/speckit-converge` encontrou 7 lacunas entre `spec.md`/`plan.md` (FR-022 a FR-030, acrescentados em 2026-09-08) e o código atual — nenhum dos requisitos de UX dessa sessão de clarificação foi implementado ainda (confirmado por inspeção direta de `painel-mensal-despesas.component.*` e `cadastro-despesa-recorrente.component.*`: sem `cursor-pointer` na maioria dos elementos, sem breakpoints responsivos, sem máscara de moeda, campos de data ainda `type="text"`, formatação ainda em BRL/"R$", e nenhum botão/lógica de "Voltar ao painel" ou de confirmação de saída). Ver `research.md` §9–§14 e `data-model.md` ("Frontend — UX transversais acrescentadas em 2026-09-08") para as decisões técnicas que estas tarefas implementam.
+
+### Tests for Phase 8 (escrever antes da implementação — TDD)
+
+- [X] T078 [P] Criar `frontend/src/app/shared/currency-mask.util.spec.ts` cobrindo `maskCurrencyDigits` (agrupamento de milhar com `.`, decimal com `,`, entrada vazia, dígitos não numéricos ignorados) per FR-028 (missing)
+- [X] T079 [P] Criar `frontend/src/app/shared/currency-format.util.spec.ts` cobrindo `formatEUR` (milhar `.`, decimal `,`, sufixo `" €"`, zero, valores negativos) per FR-030 (missing)
+- [X] T080 [P] Estender `painel-mensal-despesas.component.spec.ts`: totais/itens exibidos via `formatEUR` (sem `"R$"`); `onDraftValorInput` aplica a máscara de moeda; `confirmarPagamento` converte o valor ISO do campo de data para `dd/MM/yyyy` antes de chamar `painelService.markOccurrenceAsPaid` per FR-028/FR-029/FR-030 (missing/contradicts)
+- [X] T081 [P] Estender `cadastro-despesa-recorrente.component.spec.ts`: `valorFmt` via `formatEUR`; `onValorInput` aplica a máscara de moeda; `dataInicioError` reduzido a checagem de presença com `type="date"`; `hasUnsavedData` verdadeiro/falso (incluindo o caso: preencher e depois apagar manualmente = falso); `onClickVoltar`/`onCancelExit`/`onConfirmExit`; tela de sucesso expõe "Voltar ao painel" e "Cadastrar outra despesa" per FR-022–FR-025/FR-028–FR-030 (missing/contradicts)
+
+### Implementation for Phase 8
+
+- [X] T082 [P] Criar `frontend/src/app/shared/currency-mask.util.ts` exportando `maskCurrencyDigits` (depende de T078) per FR-028 (missing)
+- [X] T083 [P] Criar `frontend/src/app/shared/currency-format.util.ts` exportando `formatEUR` (depende de T079) per FR-030 (missing)
+- [X] T084 Substituir `formatBRL`/`Intl.NumberFormat(...BRL...)` por `formatEUR` em `painel-mensal-despesas.component.ts` (totais, itens) (depende de T083, T080) per FR-030 (contradicts)
+- [X] T085 Aplicar `maskCurrencyDigits` em `onDraftValorInput`, `painel-mensal-despesas.component.ts` (depende de T082, T080) per FR-028 (missing)
+- [X] T086 Trocar o campo `draftData` para `type="date"` em `painel-mensal-despesas.component.html`; adicionar conversão ISO→`dd/MM/yyyy` em `confirmarPagamento`, `painel-mensal-despesas.component.ts` (depende de T080) per FR-029 (missing)
+- [X] T087 [P] Adicionar `cursor-pointer`/`disabled:cursor-default` a todo elemento clicável de `painel-mensal-despesas.component.html` per FR-022 (missing)
+- [X] T088 Adicionar os breakpoints responsivos a `painel-mensal-despesas.component.html` — grade de resumo `grid-cols-3 min-[481px]:max-[720px]:grid-cols-2 max-[480px]:grid-cols-1`; colunas da linha de ocorrência `max-[720px]:order-{1..5}` (nome/status/valor/dia/ações); banners de alerta `max-[480px]:` largura total per FR-026/FR-027 (missing)
+- [X] T089 Substituir `Intl.NumberFormat(...BRL...)`/label `"R$"` por `formatEUR`/`"€"` em `cadastro-despesa-recorrente.component.ts`/`.html` (depende de T083, T081) per FR-030 (contradicts)
+- [X] T090 Aplicar `maskCurrencyDigits` em `onValorInput`, `cadastro-despesa-recorrente.component.ts` (depende de T082, T081) per FR-028 (missing)
+- [X] T091 Trocar o campo `dataInicio` para `type="date"`; remover `parseDataInicio`/`toIsoDate`; simplificar `dataInicioError` para checagem de presença, em `cadastro-despesa-recorrente.component.ts`/`.html` (depende de T081) per FR-029 (missing)
+- [X] T092 [P] Adicionar `cursor-pointer`/`disabled:cursor-default` a todo elemento clicável de `cadastro-despesa-recorrente.component.html` per FR-022 (missing)
+- [X] T093 Adicionar `hasUnsavedData` (computed), `showExitConfirmDialog` (signal) e os métodos `onClickVoltar`/`onCancelExit`/`onConfirmExit` a `cadastro-despesa-recorrente.component.ts`, injetando `Router` (`@angular/router`, já dependência do projeto) (depende de T081) per FR-023/FR-024 (missing)
+- [X] T094 Adicionar o botão/link "Voltar ao painel" ao cabeçalho do formulário (chamando `onClickVoltar()`) e o modal de confirmação de saída a `cadastro-despesa-recorrente.component.html` (depende de T093) per FR-023/FR-024 (missing)
+- [X] T095 Adicionar o botão "Voltar ao painel" (`routerLink="/"`) ao bloco de estado de sucesso em `cadastro-despesa-recorrente.component.html`, ao lado do já existente "Cadastrar outra despesa" (depende de T093) per FR-025 (missing)
+- [X] T096 [P] Adicionar `RouterLink` aos `imports` do `@Component` de `CadastroDespesaRecorrenteComponent` (depende de T093) per FR-023/FR-025 (missing)
+
+### Polish
+
+- [X] T097 Executar manualmente os Cenários 11–17 de `quickstart.md` (cursor de mão, "Voltar ao painel" com/sem dados não salvos, duas ações da tela de sucesso, breakpoints 720px/480px, máscara de moeda, seletor de data nativo, valores em Euro) e confirmar que cada resultado bate com o documentado per FR-022–FR-030 (missing)
+
+**Checkpoint**: Todos os requisitos de UX acrescentados a `spec.md` em 2026-09-08 (FR-022 a FR-030) implementados e testados, sem regressão em US1/US2/US3/Fase 7.

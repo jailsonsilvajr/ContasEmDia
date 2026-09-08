@@ -42,3 +42,18 @@
   refinamento de domínio dedicado antes do planejamento técnico desta
   feature — ver seção "Assumptions" do spec e o "Pré-requisito" do
   refinamento de origem.
+- **2026-09-08**: Revalidado após acrescentar FR-022 a FR-030 (cursor
+  pointer, "Voltar ao painel" com confirmação de dados não salvos, ações da
+  tela de sucesso do cadastro, responsividade em 720px/480px, máscara de
+  moeda, seletor de data nativo, e exibição em Euro). Todos os itens
+  continuam passando; nenhum marcador [NEEDS CLARIFICATION] foi necessário
+  porque o design de referência (`design/Main.dc.html`,
+  `design/Cadastro.dc.html`) já demonstra o comportamento esperado para
+  cada um desses pontos.
+- **2026-09-08 (sessão de clarificação)**: Revalidado após a sessão de
+  `/speckit-clarify` que resolveu 2 ambiguidades: (1) FR-023 a FR-025 serão
+  implementados dentro desta feature (006), alterando o componente
+  `cadastro-despesa-recorrente` já entregue pela feature 002; (2) FR-022 foi
+  ajustado para excluir explicitamente elementos desabilitados/inativos do
+  requisito de cursor de mão. Todos os itens do checklist continuam
+  passando; nenhuma regressão identificada.

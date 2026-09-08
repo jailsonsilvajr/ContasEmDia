@@ -262,3 +262,12 @@ ação (`200`/`400`/`500` para `GET`; `200`/`400`/`404`/`500` para `PATCH` e
 - Validação de `occurrenceId` malformado (não-GUID) na rota — comportamento
   padrão do roteamento do ASP.NET Core, não coberto pela spec funcional
   desta feature.
+- Os requisitos de UX acrescentados a `spec.md` em 2026-09-08 (FR-022 a
+  FR-030 — cursor de mão, "Voltar ao painel"/confirmação, responsividade,
+  máscara de moeda, seletor de data nativo, exibição em Euro) não alteram
+  este contrato: `paymentDate` continua sendo trafegado como string
+  `dd/MM/yyyy` no `PATCH .../payment` (o seletor de data nativo introduzido
+  no cliente converte para esse formato antes de montar a requisição —
+  ver `research.md` §12) e os valores monetários continuam trafegando como
+  `decimal` bruto (a formatação em Euro é responsabilidade exclusiva do
+  frontend).

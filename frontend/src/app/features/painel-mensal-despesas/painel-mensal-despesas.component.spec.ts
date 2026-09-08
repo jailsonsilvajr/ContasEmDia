@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { PainelMensalDespesasComponent } from './painel-mensal-despesas.component';
 import { routes } from '../../app.routes';
+import { formatEUR } from '../../shared/currency-format.util';
 import type {
   ApiEnvelope,
   GetMonthlyPanelResponse,
@@ -133,18 +134,12 @@ describe('PainelMensalDespesasComponent', () => {
     });
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('[data-testid="total-previsto"]')?.textContent).toContain(
-      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(600),
-    );
-    expect(compiled.querySelector('[data-testid="total-pago"]')?.textContent).toContain(
-      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(100),
-    );
-    expect(compiled.querySelector('[data-testid="total-pendente"]')?.textContent).toContain(
-      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(500),
-    );
+    expect(compiled.querySelector('[data-testid="total-previsto"]')?.textContent).toContain(formatEUR(600));
+    expect(compiled.querySelector('[data-testid="total-pago"]')?.textContent).toContain(formatEUR(100));
+    expect(compiled.querySelector('[data-testid="total-pendente"]')?.textContent).toContain(formatEUR(500));
   });
 
-  it('shows the empty state with zero accounts, R$ 0,00 totals, and no banners', () => {
+  it('shows the empty state with zero accounts, € 0,00 totals, and no banners', () => {
     const fixture = createAndFlush({
       success: true,
       data: { referencePeriod: { year: 2026, month: 8 }, occurrences: [] },
@@ -152,7 +147,7 @@ describe('PainelMensalDespesasComponent', () => {
     });
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const zero = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(0);
+    const zero = formatEUR(0);
 
     expect(compiled.querySelector('[data-testid="item-count"]')?.textContent).toContain('0 contas');
     expect(compiled.querySelector('[data-testid="total-previsto"]')?.textContent).toContain(zero);
@@ -182,7 +177,7 @@ describe('PainelMensalDespesasComponent', () => {
     expect(rows[1].textContent).not.toContain('diferente do previsto');
   });
 
-  it('starting edit pre-fills the expected amount and today as the draft date', () => {
+  it('starting edit pre-fills the expected amount (masked) and today as the draft date (ISO, native picker)', () => {
     const fixture = createAndFlush({
       success: true,
       data: {
@@ -199,10 +194,11 @@ describe('PainelMensalDespesasComponent', () => {
     const valorInput = compiled.querySelector('[data-testid="draft-valor-input"]') as HTMLInputElement;
     const dataInput = compiled.querySelector('[data-testid="draft-data-input"]') as HTMLInputElement;
     const today = new Date();
-    const expectedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+    const expectedIsoDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-    expect(valorInput.value).toBe('1850,00');
-    expect(dataInput.value).toBe(expectedDate);
+    expect(valorInput.value).toBe('1.850,00');
+    expect(dataInput.type).toBe('date');
+    expect(dataInput.value).toBe(expectedIsoDate);
   });
 
   it('starting edit on a second occurrence cancels the first without a network call for it', () => {
@@ -245,13 +241,13 @@ describe('PainelMensalDespesasComponent', () => {
     (compiled.querySelector('[data-testid="marcar-paga-btn"]') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    setInputValue(compiled.querySelector('[data-testid="draft-valor-input"]') as HTMLInputElement, '1500,00');
-    setInputValue(compiled.querySelector('[data-testid="draft-data-input"]') as HTMLInputElement, '18/08/2026');
+    setInputValue(compiled.querySelector('[data-testid="draft-valor-input"]') as HTMLInputElement, '150000');
+    setInputValue(compiled.querySelector('[data-testid="draft-data-input"]') as HTMLInputElement, '2026-08-18');
     (compiled.querySelector('[data-testid="confirmar-btn"]') as HTMLButtonElement).click();
 
     const req = httpMock.expectOne('/api/v1/occurrences/1/payment');
     expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ paidAmount: '1500,00', paymentDate: '18/08/2026' });
+    expect(req.request.body).toEqual({ paidAmount: '1.500,00', paymentDate: '18/08/2026' });
 
     const response: ApiEnvelope<MarkOccurrenceAsPaidResponse> = {
       success: true,

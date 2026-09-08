@@ -1,8 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Router, RouterLink } from '@angular/router';
 
 import { DespesaRecorrenteService } from '../despesa-recorrente.service';
 import { DespesaPreviewComponent } from '../despesa-preview/despesa-preview.component';
+import { maskCurrencyDigits } from '../../../shared/currency-mask.util';
+import { formatEUR } from '../../../shared/currency-format.util';
 import {
   CATEGORY_COLORS,
   CATEGORY_OPTIONS,
@@ -30,12 +33,6 @@ function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
   );
 }
 
-interface ParsedDate {
-  year: number;
-  month: number;
-  day: number;
-}
-
 function parseValor(raw: string): number | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -51,39 +48,26 @@ function parseDia(raw: string): number | null {
   return Number(trimmed);
 }
 
-function parseDataInicio(raw: string): ParsedDate | null {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(raw.trim());
-  if (!match) return null;
-  const day = Number(match[1]);
-  const month = Number(match[2]);
-  const year = Number(match[3]);
-  const date = new Date(year, month - 1, day);
-  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
-  return { year, month, day };
-}
-
-function toIsoDate(parsed: ParsedDate): string {
-  const mm = String(parsed.month).padStart(2, '0');
-  const dd = String(parsed.day).padStart(2, '0');
-  return `${parsed.year}-${mm}-${dd}`;
-}
+const DEFAULT_CATEGORIA: CategoryValue = 'Housing';
+const DEFAULT_STATUS: StatusValue = 'ativa';
 
 @Component({
   selector: 'app-cadastro-despesa-recorrente',
-  imports: [DespesaPreviewComponent],
+  imports: [DespesaPreviewComponent, RouterLink],
   templateUrl: './cadastro-despesa-recorrente.component.html',
 })
 export class CadastroDespesaRecorrenteComponent {
   private readonly despesaRecorrenteService = inject(DespesaRecorrenteService);
+  private readonly router = inject(Router);
 
   protected readonly categoryOptions = CATEGORY_OPTIONS;
 
   readonly nome = signal('');
-  readonly categoria = signal<CategoryValue>('Housing');
+  readonly categoria = signal<CategoryValue>(DEFAULT_CATEGORIA);
   readonly valor = signal('');
   readonly dia = signal('');
   readonly dataInicio = signal('');
-  readonly status = signal<StatusValue>('ativa');
+  readonly status = signal<StatusValue>(DEFAULT_STATUS);
   readonly observacao = signal('');
 
   readonly formStatus = signal<FormStatus>('idle');
@@ -94,15 +78,15 @@ export class CadastroDespesaRecorrenteComponent {
   readonly submitAttempted = signal(false);
   readonly apiFieldErrors = signal<Partial<Record<ApiField, string>>>({});
 
+  readonly showExitConfirmDialog = signal(false);
+
   readonly nomePreview = computed(() => this.nome().trim() || 'Nome da despesa');
   readonly categoriaLabel = computed(
     () => CATEGORY_OPTIONS.find((o) => o.value === this.categoria())?.label ?? '',
   );
   readonly catColor = computed(() => CATEGORY_COLORS[this.categoria()] ?? '#667085');
   readonly valorNum = computed(() => parseValor(this.valor()));
-  readonly valorFmt = computed(() =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(this.valorNum() ?? 0),
-  );
+  readonly valorFmt = computed(() => formatEUR(this.valorNum() ?? 0));
   readonly diaLabel = computed(() => {
     const dia = parseDia(this.dia());
     return dia !== null && dia >= 1 && dia <= 31 ? `Dia ${dia}` : 'Dia --';
@@ -139,11 +123,22 @@ export class CadastroDespesaRecorrenteComponent {
     return null;
   });
   readonly dataInicioError = computed(() => {
-    if (parseDataInicio(this.dataInicio()) === null) return 'Data de início deve ser uma data válida (dd/mm/aaaa).';
+    if (!this.dataInicio().trim()) return 'Data de início é obrigatória.';
     return null;
   });
   readonly isFormValid = computed(
     () => !this.nomeError() && !this.valorError() && !this.diaError() && !this.dataInicioError(),
+  );
+
+  readonly hasUnsavedData = computed(
+    () =>
+      this.nome().trim() !== '' ||
+      this.valor().trim() !== '' ||
+      this.dia().trim() !== '' ||
+      this.dataInicio().trim() !== '' ||
+      this.observacao().trim() !== '' ||
+      this.categoria() !== DEFAULT_CATEGORIA ||
+      this.status() !== DEFAULT_STATUS,
   );
 
   readonly showNomeError = computed(
@@ -186,7 +181,7 @@ export class CadastroDespesaRecorrenteComponent {
   }
 
   protected onValorInput(event: Event): void {
-    this.valor.set((event.target as HTMLInputElement).value);
+    this.valor.set(maskCurrencyDigits((event.target as HTMLInputElement).value));
   }
 
   protected onDiaInput(event: Event): void {
@@ -205,6 +200,23 @@ export class CadastroDespesaRecorrenteComponent {
     this.status.set(value);
   }
 
+  protected onClickVoltar(): void {
+    if (this.hasUnsavedData()) {
+      this.showExitConfirmDialog.set(true);
+      return;
+    }
+    this.router.navigateByUrl('/');
+  }
+
+  protected onCancelExit(): void {
+    this.showExitConfirmDialog.set(false);
+  }
+
+  protected onConfirmExit(): void {
+    this.showExitConfirmDialog.set(false);
+    this.router.navigateByUrl('/');
+  }
+
   protected onSalvar(): void {
     if (this.formStatus() === 'loading') return;
 
@@ -213,13 +225,12 @@ export class CadastroDespesaRecorrenteComponent {
       return;
     }
 
-    const parsedData = parseDataInicio(this.dataInicio());
     const payload: CreateRecurringExpenseRequest = {
       name: this.nome().trim(),
       category: this.categoria(),
       monthlyAmount: parseValor(this.valor()) ?? 0,
       dueDay: parseDia(this.dia()) ?? 0,
-      startDate: parsedData ? toIsoDate(parsedData) : '',
+      startDate: this.dataInicio(),
       frequency: 'Monthly',
       status: this.status() === 'ativa' ? 'Active' : 'Paused',
       note: this.observacao().trim() ? this.observacao().trim() : null,

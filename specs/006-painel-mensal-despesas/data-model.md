@@ -270,3 +270,53 @@ novamente para recarregar `occurrences` a partir da nova competência
 (mesmo endpoint `GET /api/v1/occurrences?year=&month=` já usado na carga
 inicial — nenhum endpoint novo). O botão "Nova despesa" não tem estado de
 componente próprio — é um `routerLink="/despesas/nova"` no template.
+
+## Frontend — UX transversais acrescentadas em 2026-09-08 (FR-022 a FR-030)
+
+Ver `research.md` §9–§14 para a justificativa de cada decisão abaixo.
+Nenhum tipo novo é introduzido no Domain/Application/API — todas as
+mudanças abaixo são de frontend (utilitários compartilhados + estado de
+componente).
+
+### Novos utilitários compartilhados (`frontend/src/app/shared/`)
+
+| Arquivo | Export | Assinatura | Usado por |
+|---|---|---|---|
+| `currency-mask.util.ts` | `maskCurrencyDigits` | `(raw: string) => string` | `painel-mensal-despesas.component.ts` (`onDraftValorInput`), `cadastro-despesa-recorrente.component.ts` (`onValorInput`) |
+| `currency-format.util.ts` | `formatEUR` | `(value: number) => string` | Substitui `formatBRL` em `painel-mensal-despesas.component.ts` e o `Intl.NumberFormat(...BRL...)` de `valorFmt` em `cadastro-despesa-recorrente.component.ts` |
+
+Ambos são funções puras, sem estado e sem dependência de Angular — testáveis
+isoladamente (`currency-mask.util.spec.ts`, `currency-format.util.spec.ts`).
+
+### `PainelMensalDespesasComponent` — alterações
+
+| Elemento | Mudança |
+|---|---|
+| `draftData` (signal) | Passa a ser alimentado por um `<input type="date">` (valor ISO `yyyy-MM-dd`), em vez de `type="text"` livre |
+| `onDraftDataInput` | Sem mudança de assinatura — apenas o valor recebido do evento passa a já vir validado/normalizado pelo navegador (ISO ou vazio) |
+| `confirmarPagamento` | Antes de chamar `painelService.markOccurrenceAsPaid(...)`, converte `draftData()` de ISO para `dd/MM/yyyy` via nova função pura `isoToBrDate` (local ao arquivo do componente, ao lado de `formatIsoDateAsBR`/`formatDateAsBR` já existentes) — contrato de API inalterado (`paymentDate` continua `dd/MM/yyyy`, ver `research.md` §12) |
+| `onDraftValorInput` | Aplica `maskCurrencyDigits` ao valor bruto do evento antes de gravar em `draftValor` |
+| `formatBRL` (função local) | Removida; usos substituídos por `formatEUR` (utilitário compartilhado) |
+| Template — grade de 3 cartões | `grid-cols-3 min-[481px]:max-[720px]:grid-cols-2 max-[480px]:grid-cols-1` (FR-026/FR-027 — ver `research.md` §13) |
+| Template — colunas da linha de ocorrência | `max-[720px]:order-{1..5}` em `nome`/`status`/`valor`/`dia`/`ações`, nesta ordem (FR-026) |
+| Template — banners de alerta | `max-[480px]:basis-full` (ou equivalente) para ocupar largura total em telas ≤480px (FR-027) |
+| Template — elementos clicáveis | `cursor-pointer` em todo botão/link/seta/ícone de ação/input de data; `disabled:cursor-default` nos botões que podem ficar desabilitados (FR-022 — ver `research.md` §9) |
+
+### `CadastroDespesaRecorrenteComponent` — alterações
+
+| Elemento | Mudança |
+|---|---|
+| `dataInicio` (signal) | Passa a guardar diretamente o valor ISO de um `<input type="date">`; `parseDataInicio`/`toIsoDate` são removidas (o payload `startDate` já era ISO — nenhuma mudança de contrato) |
+| `dataInicioError` | Simplificado para checar apenas presença (o navegador já impede submissão de data inválida/incompleta em `type="date"`) |
+| `onValorInput` | Aplica `maskCurrencyDigits` ao valor bruto do evento antes de gravar em `valor` |
+| `valorFmt` | Passa a usar `formatEUR` (utilitário compartilhado) em vez de `Intl.NumberFormat(...BRL...)` |
+| `hasUnsavedData` (computed novo) | `true` se `nome`/`valor`/`dia`/`dataInicio`/`observacao` não vazios, ou `categoria`/`status` diferentes dos padrões (`'Housing'`/`'ativa'`) — comparação de valor, não flag de "tocou" (FR-024, edge case 2026-09-08) |
+| `showExitConfirmDialog` (signal novo) | Controla a exibição do modal de confirmação de saída |
+| `onClickVoltar()` (método novo) | `hasUnsavedData()` falso → navega direto para `/`; verdadeiro → `showExitConfirmDialog.set(true)` (FR-023/FR-024) |
+| `onCancelExit()` (método novo) | Fecha o modal sem navegar |
+| `onConfirmExit()` (método novo) | Fecha o modal e navega para `/`, descartando os dados (sem salvamento parcial) |
+| Template — cabeçalho do formulário | Novo botão/link "Voltar ao painel" chamando `onClickVoltar()` (posição conforme `design/Cadastro.dc.html`) |
+| Template — estado de sucesso | Novo botão "Voltar ao painel" (`routerLink="/"`, sem verificação de dados não salvos), ao lado do já existente "Cadastrar outra despesa" (`onNovaDespesa()`) — FR-025 |
+| Template — modal de confirmação | Novo bloco condicional (`@if (showExitConfirmDialog())`), reproduzindo `design/Cadastro.dc.html` (título, texto de aviso, botões "Continuar editando"/"Sair sem salvar") |
+| Template — elementos clicáveis | `cursor-pointer`/`disabled:cursor-default` conforme FR-022 |
+| `imports` do `@Component` | Ganha `RouterLink` (`@angular/router`, já dependência do projeto — `research.md` §7) |
