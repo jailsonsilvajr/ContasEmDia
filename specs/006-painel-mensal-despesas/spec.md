@@ -22,6 +22,24 @@
   `/despesas/nova` — o fluxo de cadastro em si permanece fora do escopo
   desta especificação.
 
+### Session 2026-09-08
+
+- Q: O comportamento "Voltar ao painel"/confirmação (FR-023–FR-024) e as
+  duas ações da tela de sucesso (FR-025) devem ser implementados dentro
+  desta mesma feature (006), alterando o componente de cadastro já entregue
+  pela feature 002, ou esta especificação apenas documenta o requisito para
+  um planejamento/implementação separados? → A: Implementar agora, como
+  parte da feature 006 — alterando diretamente o componente
+  `cadastro-despesa-recorrente` já existente (entregue pela feature 002)
+  durante o planejamento/implementação desta feature.
+- Q: Elementos clicáveis desabilitados/inativos (ex.: um botão "Confirmar"
+  desabilitado) devem ficar de fora do requisito de cursor de mão (FR-022),
+  seguindo o `button:disabled { cursor: default; }` já definido nos designs
+  de referência, ou o cursor de mão deve aparecer mesmo sobre elementos
+  desabilitados? → A: Excluir elementos desabilitados — o cursor de mão se
+  aplica apenas a elementos habilitados/acionáveis; controles desabilitados
+  ou inativos usam o cursor padrão (não pointer).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Visualizar o painel mensal de uma competência (Priority: P1)
@@ -66,7 +84,7 @@ dados esperados, sem executar nenhuma ação de pagamento.
    não pagas.
 6. **Given** uma competência sem nenhuma ocorrência, **When** o painel é
    exibido, **Then** a lista aparece vazia, o contador mostra "0 contas",
-   os três cartões de resumo mostram R$ 0,00 e nenhum banner aparece.
+   os três cartões de resumo mostram € 0,00 e nenhum banner aparece.
 7. **Given** uma ocorrência não paga, **When** o painel calcula seu status,
    **Then** o selo mostra "Vencida" se o vencimento já passou, "Vence em
    breve" se o vencimento é hoje ou em até 7 dias, ou "Pendente" se faltam
@@ -156,7 +174,7 @@ que a ação "Marcar como paga" volta a ficar disponível para ela.
 
 - Competência sem nenhuma ocorrência: lista vazia, contador "0 contas", os
   três cartões de resumo zerados e nenhum banner aparece.
-- Todas as ocorrências da competência já pagas: "Total pendente" é R$ 0,00,
+- Todas as ocorrências da competência já pagas: "Total pendente" é € 0,00,
   e nenhuma ocorrência conta como "Vencida" ou "Vence em breve" (esses dois
   status só se aplicam a ocorrências não pagas).
 - Ocorrência vencendo exatamente hoje: não é "Vencida"; é "Vence em breve"
@@ -196,6 +214,27 @@ que a ação "Marcar como paga" volta a ficar disponível para ela.
   ausente ou não numérico): o sistema nunca deve tratar esse período como
   se fosse válido nem retornar dados de uma competência diferente da
   pedida.
+- Usuário aciona "Voltar ao painel" na tela de cadastro sem ter alterado
+  nenhum campo em relação ao estado inicial do formulário: navega direto
+  para o painel, sem exibir confirmação.
+- Usuário aciona "Voltar ao painel" na tela de cadastro após preencher ao
+  menos um campo e depois desfazer manualmente essa alteração (formulário
+  volta ao estado inicial vazio): tratado como "sem dados não salvos", sem
+  confirmação.
+- Usuário confirma "Sair sem salvar" no diálogo de confirmação: os dados
+  digitados são descartados e o usuário é navegado para o painel, sem
+  nenhuma tentativa de salvamento parcial.
+- Usuário digita um valor monetário com caracteres não numéricos (letras,
+  símbolos) em um campo com máscara de moeda: os caracteres inválidos são
+  ignorados e apenas o valor numérico resultante é mantido e formatado.
+- Largura da janela cruza um dos breakpoints (720px ou 480px) enquanto o
+  painel já está aberto (ex.: redimensionamento de janela ou rotação de
+  tela): o layout se reajusta imediatamente para o breakpoint aplicável,
+  sem exigir recarregar a página.
+- Usuário passa o mouse sobre um elemento clicável que está desabilitado ou
+  temporariamente inativo (ex.: botão de confirmação desabilitado durante
+  um estado de carregamento): o cursor exibido é o padrão do sistema, não o
+  cursor de mão.
 
 ## Requirements *(mandatory)*
 
@@ -213,7 +252,7 @@ que a ação "Marcar como paga" volta a ficar disponível para ela.
   retorná-la como se fosse uma competência válida.
 - **FR-004**: O sistema MUST exibir, para cada ocorrência, ao menos: nome
   da despesa, categoria, indicador de cor por categoria, valor previsto
-  formatado em reais, dia de vencimento e um selo de status.
+  formatado em euros (€), dia de vencimento e um selo de status.
 - **FR-005**: O sistema MUST calcular o status de cada ocorrência a partir
   de seu estado de pagamento e da comparação entre sua data de vencimento
   completa e a data atual, segundo as seguintes regras, nesta ordem de
@@ -275,7 +314,57 @@ que a ação "Marcar como paga" volta a ficar disponível para ela.
 - **FR-021**: O sistema MUST exibir um botão "Nova despesa" no painel; ao
   ser acionado, o sistema MUST navegar o usuário para a rota
   `/despesas/nova`. O comportamento do fluxo de cadastro de despesa
-  recorrente nessa rota está fora do escopo desta especificação.
+  recorrente nessa rota está fora do escopo desta especificação, exceto
+  pelos comportamentos de navegação e confirmação descritos em FR-023 a
+  FR-025.
+- **FR-022**: O sistema MUST exibir o cursor do tipo "mão" (pointer) ao
+  passar o mouse sobre qualquer elemento clicável ou interativo que esteja
+  habilitado/acionável — botões, links, setas de navegação de mês, ícones
+  de ação, linhas/itens acionáveis e o seletor de data — em todas as telas
+  cobertas por esta especificação (painel mensal, tela de cadastro e tela
+  de sucesso do cadastro). Um elemento desabilitado ou temporariamente
+  inativo (ex.: um botão de confirmação desabilitado) MUST exibir o cursor
+  padrão (não pointer) em vez do cursor de mão, sinalizando que a ação não
+  está disponível no momento.
+- **FR-023**: A tela de cadastro de despesa MUST oferecer uma ação "Voltar
+  ao painel" que navega o usuário de volta ao painel mensal de despesas.
+- **FR-024**: Ao acionar "Voltar ao painel" a partir da tela de cadastro,
+  se o formulário contiver dados preenchidos pelo usuário que ainda não
+  foram salvos, o sistema MUST exibir uma confirmação antes de sair,
+  oferecendo as opções de continuar editando (permanecendo na tela, sem
+  perder os dados) ou sair sem salvar (descartando os dados e navegando
+  para o painel); se o formulário não contiver nenhum dado preenchido pelo
+  usuário, o sistema MUST navegar diretamente para o painel, sem exibir
+  confirmação.
+- **FR-025**: A tela de sucesso exibida após o cadastro de uma despesa
+  recorrente MUST oferecer duas ações: "Voltar ao painel" (navega para o
+  painel mensal) e "Cadastrar nova despesa" (retorna a um formulário de
+  cadastro vazio para uma nova despesa).
+- **FR-026**: O painel mensal MUST se adaptar a telas de largura reduzida
+  usando ao menos dois breakpoints — até 720px e até 480px de largura —
+  com o seguinte comportamento: em até 720px, a grade dos três cartões de
+  resumo MUST passar a exibir 2 colunas em vez de 3, e cada linha da lista
+  de ocorrências MUST reorganizar seus campos em blocos empilhados
+  (nome em largura total, seguido por status, valor previsto, dia de
+  vencimento e ações, cada um em sua própria linha) em vez do layout em
+  colunas fixas usado em telas largas.
+- **FR-027**: Em telas com até 480px de largura, o painel MUST exibir a
+  grade dos três cartões de resumo em uma única coluna, e os banners de
+  alerta (contas vencidas / vencendo em breve) MUST ocupar a largura total
+  disponível.
+- **FR-028**: Todo campo de entrada de valor monetário (ex.: valor pago ao
+  registrar um pagamento no painel, valor previsto na tela de cadastro)
+  MUST aplicar uma máscara de moeda enquanto o usuário digita, formatando o
+  valor digitado no padrão monetário exibido pelo sistema (separador de
+  milhar e separador decimal) em tempo real, sem exigir que o usuário digite
+  esses separadores manualmente.
+- **FR-029**: Todo campo de entrada de data (ex.: data de pagamento no
+  painel, data de início na tela de cadastro) MUST abrir o seletor de
+  calendário nativo do navegador/dispositivo ao ser clicado ou ativado, em
+  vez de exigir digitação manual da data como único meio de preenchimento.
+- **FR-030**: O sistema MUST exibir todos os valores monetários — nos
+  cartões de resumo, nos banners de alerta, em cada ocorrência da lista e
+  nos campos de entrada de valor — no formato de Euro (€), em vez de reais.
 
 ### Key Entities
 
@@ -317,6 +406,13 @@ que a ação "Marcar como paga" volta a ficar disponível para ela.
 - **SC-005**: Em 100% das competências sem nenhuma ocorrência elegível, a
   tela não exibe nenhum banner de alerta e mostra os totais zerados, sem
   erros ou estados de carregamento indefinidos.
+- **SC-006**: Em uma tela de smartphone (largura até 480px), um usuário
+  consegue ler os três totais e identificar o status de qualquer ocorrência
+  da lista sem precisar rolar a tela horizontalmente.
+- **SC-007**: Um usuário que preencheu dados no formulário de cadastro e
+  tenta sair sem salvar é sempre avisado antes de perder esses dados; um
+  usuário que não alterou nada consegue voltar ao painel sem nenhuma
+  interrupção.
 
 ## Assumptions
 
@@ -344,10 +440,32 @@ que a ação "Marcar como paga" volta a ficar disponível para ela.
   especificação — cobrem apenas a visualização do painel mensal e as ações
   de marcar/desfazer pagamento de uma ocorrência já existente. O botão
   "Nova despesa" do painel (FR-021) está em escopo apenas quanto à sua
-  presença e ao disparo da navegação para `/despesas/nova`; o comportamento
-  da tela/fluxo de cadastro em si permanece fora do escopo desta
-  especificação.
+  presença e ao disparo da navegação para `/despesas/nova`; os campos,
+  validações e regras de negócio do formulário de cadastro em si permanecem
+  fora do escopo desta especificação. Ficam em escopo apenas os
+  comportamentos de UX transversais definidos em FR-022 a FR-025: cursor de
+  hover, ação "Voltar ao painel" (com confirmação condicional a dados não
+  salvos) e as duas ações da tela de sucesso do cadastro. Conforme
+  esclarecido na sessão de clarificação de 2026-09-08, a implementação de
+  FR-023 a FR-025 é parte do escopo técnico desta feature (006) e envolve
+  alterar diretamente o componente de cadastro já entregue pela feature 002
+  (`cadastro-despesa-recorrente`); esta feature não recria esse componente
+  do zero, apenas adiciona a ele os comportamentos de navegação/confirmação
+  especificados aqui.
 - O contrato técnico exato (rotas, formatos de requisição/resposta, códigos
   de status) da consulta de dados do painel e das ações de marcar/desfazer
   pagamento fica para a fase de planejamento técnico desta feature, não
   para esta especificação funcional.
+- Os valores monetários do painel são exibidos em Euro (€), conforme
+  FR-030, substituindo a formatação em reais assumida em uma versão
+  anterior desta especificação; o formato exato de agrupamento de milhar e
+  separador decimal segue o padrão observado no design de referência
+  (vírgula decimal, símbolo "€" após o valor).
+- O formato exato da máscara de moeda aplicada durante a digitação
+  (FR-028) e o comportamento detalhado do seletor de data nativo (FR-029)
+  seguem o padrão observado no design de referência; nenhuma biblioteca ou
+  técnica de implementação específica é prescrita por esta especificação
+  funcional.
+- Os dois breakpoints responsivos citados em FR-026 e FR-027 (720px e
+  480px) refletem os pontos de quebra já usados no design de referência;
+  breakpoints adicionais não são exigidos por esta especificação.

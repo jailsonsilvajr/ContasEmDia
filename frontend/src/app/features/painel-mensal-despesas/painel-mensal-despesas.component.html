@@ -11,15 +11,15 @@
       </div>
       <div class="flex items-center gap-3.5">
         <div class="flex items-center gap-1 rounded-[10px] border border-border-light bg-white px-2 py-1.5">
-          <button type="button" data-testid="mes-anterior-btn" class="flex h-[26px] w-[26px] items-center justify-center rounded-md border-none bg-transparent p-0" aria-label="Mês anterior" (click)="mesAnterior()">
+          <button type="button" data-testid="mes-anterior-btn" class="flex h-[26px] w-[26px] cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-0 disabled:cursor-default" aria-label="Mês anterior" (click)="mesAnterior()">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
           </button>
           <span class="font-heading px-1.5 text-sm font-semibold whitespace-nowrap" data-testid="mes-atual-label">{{ monthLabel() }}</span>
-          <button type="button" data-testid="mes-proximo-btn" class="flex h-[26px] w-[26px] items-center justify-center rounded-md border-none bg-transparent p-0" aria-label="Próximo mês" (click)="proximoMes()">
+          <button type="button" data-testid="mes-proximo-btn" class="flex h-[26px] w-[26px] cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-0 disabled:cursor-default" aria-label="Próximo mês" (click)="proximoMes()">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
           </button>
         </div>
-        <button type="button" data-testid="nova-despesa-btn" class="flex items-center gap-2 rounded-[10px] border-none bg-accent px-4 py-2.5 text-sm font-semibold text-white" routerLink="/despesas/nova">
+        <button type="button" data-testid="nova-despesa-btn" class="flex cursor-pointer items-center gap-2 rounded-[10px] border-none bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-default" routerLink="/despesas/nova">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
           Nova despesa
         </button>
@@ -28,7 +28,7 @@
 
     <div class="mb-7 flex flex-wrap gap-4">
       @if (hasVencidas()) {
-        <div class="flex min-w-[240px] flex-1 items-center gap-3 rounded-xl border border-[#F7C8C2] bg-[#FDECEA] p-4" role="alert" data-testid="banner-vencidas">
+        <div class="flex min-w-[240px] flex-1 items-center gap-3 rounded-xl border border-[#F7C8C2] bg-[#FDECEA] p-4 max-[480px]:basis-full" role="alert" data-testid="banner-vencidas">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#C0362C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true">
             <path d="M10.3 3.9l-8 14A1.5 1.5 0 0 0 3.6 20h16.8a1.5 1.5 0 0 0 1.3-2.1l-8-14a1.5 1.5 0 0 0-2.6 0z"></path>
             <path d="M12 9v4"></path><path d="M12 16.5v.01"></path>
@@ -40,7 +40,7 @@
         </div>
       }
       @if (hasVenceEmBreve()) {
-        <div class="flex min-w-[240px] flex-1 items-center gap-3 rounded-xl border border-[#F5DDA0] bg-[#FFF6E5] p-4" role="alert" data-testid="banner-vence-em-breve">
+        <div class="flex min-w-[240px] flex-1 items-center gap-3 rounded-xl border border-[#F5DDA0] bg-[#FFF6E5] p-4 max-[480px]:basis-full" role="alert" data-testid="banner-vence-em-breve">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#9A6300" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true">
             <circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path>
           </svg>
@@ -52,7 +52,7 @@
       }
     </div>
 
-    <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="mb-8 grid grid-cols-3 gap-4 min-[481px]:max-[720px]:grid-cols-2 max-[480px]:grid-cols-1">
       <div class="rounded-[14px] border border-border-light bg-white p-5">
         <div class="text-xs font-semibold tracking-wide text-muted uppercase">Total previsto no mês</div>
         <div class="font-heading mt-2 text-[26px] font-extrabold" data-testid="total-previsto">{{ totalPrevistoFmt() }}</div>
@@ -74,19 +74,19 @@
 
     <div class="flex flex-col gap-2.5">
       @for (item of displayItems(); track item.id) {
-        <div class="flex flex-wrap items-center gap-4 rounded-xl border border-border-light bg-white px-5 py-4" data-testid="occurrence-row">
+        <div class="flex flex-wrap items-center gap-4 rounded-xl border border-border-light bg-white px-5 py-4 max-[720px]:items-start" data-testid="occurrence-row">
 
-          <div class="flex min-w-[180px] flex-1 items-center gap-1.5">
+          <div class="flex min-w-[180px] flex-1 items-center gap-1.5 max-[720px]:order-1 max-[720px]:w-full">
             <span class="h-2 w-2 shrink-0 rounded-full" [style.background]="item.catColor"></span>
             <span class="text-[15px] font-bold">{{ item.nome }}</span>
             <span class="text-[13px] text-muted">· {{ item.categoria }}</span>
           </div>
 
-          <div class="font-heading w-[110px] text-right text-[15px] font-bold">{{ item.valorPrevistoFmt }}</div>
+          <div class="font-heading w-[110px] text-right text-[15px] font-bold max-[720px]:order-3 max-[720px]:w-auto max-[720px]:text-left">{{ item.valorPrevistoFmt }}</div>
 
-          <div class="w-[70px] text-center text-[13px] text-muted">{{ item.diaLabel }}</div>
+          <div class="w-[70px] text-center text-[13px] text-muted max-[720px]:order-4 max-[720px]:w-auto max-[720px]:text-left">{{ item.diaLabel }}</div>
 
-          <div class="flex w-[150px] justify-center">
+          <div class="flex w-[150px] justify-center max-[720px]:order-2 max-[720px]:w-auto max-[720px]:justify-start">
             <span
               class="rounded-full px-3 py-1.5 text-xs font-bold whitespace-nowrap"
               [style.background]="item.statusBg"
@@ -95,13 +95,13 @@
             >
           </div>
 
-          <div class="flex w-[210px] justify-end">
+          <div class="flex w-[210px] justify-end max-[720px]:order-5 max-[720px]:w-full max-[720px]:justify-start">
             @if (!item.isEditing) {
               @if (item.notPaid) {
                 <button
                   type="button"
                   data-testid="marcar-paga-btn"
-                  class="rounded-lg border-[1.5px] border-accent bg-white px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap text-accent"
+                  class="cursor-pointer rounded-lg border-[1.5px] border-accent bg-white px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap text-accent disabled:cursor-default"
                   (click)="iniciarPagamento(item.id)"
                 >
                   Marcar como paga
@@ -142,10 +142,9 @@
                 </div>
                 <input
                   [id]="'draft-data-' + item.id"
-                  type="text"
+                  type="date"
                   data-testid="draft-data-input"
-                  class="w-full rounded-md border border-[#D0D5DD] px-2 py-1.5 text-[13px]"
-                  placeholder="dd/mm/aaaa"
+                  class="w-full cursor-pointer rounded-md border border-[#D0D5DD] px-2 py-1.5 text-[13px]"
                   [value]="draftData()"
                   (input)="onDraftDataInput($event)"
                   aria-label="Data do pagamento"
@@ -154,7 +153,7 @@
                   <button
                     type="button"
                     data-testid="confirmar-btn"
-                    class="rounded-md border-none bg-accent px-3 py-1.5 text-[13px] font-semibold text-white"
+                    class="cursor-pointer rounded-md border-none bg-accent px-3 py-1.5 text-[13px] font-semibold text-white disabled:cursor-default"
                     (click)="confirmarPagamento(item.id)"
                   >
                     Confirmar
@@ -162,7 +161,7 @@
                   <button
                     type="button"
                     data-testid="cancelar-btn"
-                    class="rounded-md border-none bg-transparent px-2 py-1.5 text-[13px] text-muted"
+                    class="cursor-pointer rounded-md border-none bg-transparent px-2 py-1.5 text-[13px] text-muted disabled:cursor-default"
                     (click)="cancelarEdicao()"
                   >
                     Cancelar

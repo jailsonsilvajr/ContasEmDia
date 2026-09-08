@@ -1,9 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { Router, provideRouter } from '@angular/router';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { CadastroDespesaRecorrenteComponent } from './cadastro-despesa-recorrente.component';
+import { routes } from '../../../app.routes';
 import type { CreateRecurringExpenseResponse } from '../despesa-recorrente.model';
 
 function setInputValue(el: HTMLInputElement | HTMLTextAreaElement, value: string): void {
@@ -22,7 +24,7 @@ function fillValidForm(root: HTMLElement): void {
   categoriaSelect.dispatchEvent(new Event('change'));
   setInputValue(root.querySelector('[data-testid="valor-input"]')!, '1500,50');
   setInputValue(root.querySelector('[data-testid="dia-input"]')!, '5');
-  setInputValue(root.querySelector('[data-testid="data-inicio-input"]')!, '01/09/2026');
+  setInputValue(root.querySelector('[data-testid="data-inicio-input"]')!, '2026-09-01');
 }
 
 describe('CadastroDespesaRecorrenteComponent', () => {
@@ -33,7 +35,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [CadastroDespesaRecorrenteComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter(routes)],
     });
     fixture = TestBed.createComponent(CadastroDespesaRecorrenteComponent);
     root = fixture.nativeElement as HTMLElement;
@@ -129,7 +131,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     setInputValue(root.querySelector('[data-testid="nome-input"]')!, 'Internet');
     setInputValue(root.querySelector('[data-testid="valor-input"]')!, '150');
     setInputValue(root.querySelector('[data-testid="dia-input"]')!, '10');
-    setInputValue(root.querySelector('[data-testid="data-inicio-input"]')!, '01/09/2026');
+    setInputValue(root.querySelector('[data-testid="data-inicio-input"]')!, '2026-09-01');
     fixture.detectChanges();
 
     root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
@@ -209,19 +211,13 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     expect(root.querySelector('[data-testid="nome-error"]')?.textContent).toContain('obrigat');
   });
 
-  it('shows the corresponding message for valor <= 0, negative, or more than 2 decimals on blur or submit (US3-3, FR-004)', () => {
+  it('shows the corresponding message for valor equal to zero or empty on blur or submit (US3-3, FR-004)', () => {
+    // With the currency mask (FR-028) applied to this field, negative values and inputs with
+    // more than two decimal digits can no longer be typed at all — the mask always normalizes
+    // to a non-negative amount with exactly two decimal digits, so those two previously-tested
+    // sub-cases are no longer reachable through user input.
     const valorInput = root.querySelector<HTMLInputElement>('[data-testid="valor-input"]')!;
     setInputValue(valorInput, '0');
-    blur(valorInput);
-    fixture.detectChanges();
-    expect(root.querySelector('[data-testid="valor-error"]')).toBeTruthy();
-
-    setInputValue(valorInput, '-5');
-    blur(valorInput);
-    fixture.detectChanges();
-    expect(root.querySelector('[data-testid="valor-error"]')).toBeTruthy();
-
-    setInputValue(valorInput, '10,999');
     blur(valorInput);
     fixture.detectChanges();
     expect(root.querySelector('[data-testid="valor-error"]')).toBeTruthy();
@@ -231,6 +227,13 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
     fixture.detectChanges();
     expect(root.querySelector('[data-testid="valor-error"]')).toBeTruthy();
+  });
+
+  it('applies the currency mask (thousands dot, decimal comma) while typing the valor field (FR-028)', () => {
+    const valorInput = root.querySelector<HTMLInputElement>('[data-testid="valor-input"]')!;
+    setInputValue(valorInput, '150050');
+    fixture.detectChanges();
+    expect(valorInput.value).toBe('1.500,50');
   });
 
   it('shows the corresponding message for dia outside 1..31 on blur or submit (US3-4, FR-005)', () => {
@@ -252,15 +255,17 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     expect(root.querySelector('[data-testid="dia-error"]')).toBeTruthy();
   });
 
-  it('shows the corresponding message for an invalid dataInicio on blur or submit (US3-5, FR-006)', () => {
+  it('shows a required-field message for an empty dataInicio on blur or submit (US3-5, FR-006, FR-029)', () => {
+    // With the native date picker (FR-029) in place, the browser itself prevents selecting a
+    // calendar-invalid date (e.g. 31/02) — the only reachable invalid state through the UI is
+    // an empty value, so dataInicioError is reduced to a presence check.
     const dataInput = root.querySelector<HTMLInputElement>('[data-testid="data-inicio-input"]')!;
-    setInputValue(dataInput, '31/02/2026');
+    expect(dataInput.type).toBe('date');
+
     blur(dataInput);
     fixture.detectChanges();
     expect(root.querySelector('[data-testid="data-inicio-error"]')).toBeTruthy();
 
-    setInputValue(dataInput, '');
-    fixture.detectChanges();
     root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
     fixture.detectChanges();
     expect(root.querySelector('[data-testid="data-inicio-error"]')).toBeTruthy();
@@ -293,9 +298,9 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     expect(c.formStatus()).toBe('error');
     expect(root.querySelector('[data-testid="erro-banner"]')).toBeTruthy();
     expect(c.nome()).toBe('Aluguel');
-    expect(c.valor()).toBe('1500,50');
+    expect(c.valor()).toBe('1.500,50');
     expect(c.dia()).toBe('5');
-    expect(c.dataInicio()).toBe('01/09/2026');
+    expect(c.dataInicio()).toBe('2026-09-01');
   });
 
   it('resends the same payload when "Tentar novamente" is clicked, without requiring re-entry (US4-2, FR-017)', () => {
@@ -389,5 +394,118 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     fixture.detectChanges();
 
     httpMock.expectOne('/api/v1/recurring-expenses');
+  });
+
+  it('navigates straight to the panel when "Voltar ao painel" is clicked with an untouched form (FR-023/FR-024)', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl');
+
+    root.querySelector<HTMLButtonElement>('[data-testid="voltar-painel-btn"]')!.click();
+    fixture.detectChanges();
+
+    expect(navigateSpy).toHaveBeenCalledWith('/');
+    expect(root.querySelector('[data-testid="exit-confirm-overlay"]')).toBeFalsy();
+  });
+
+  it('shows a confirmation dialog when "Voltar ao painel" is clicked with unsaved data, and "Continuar editando" keeps the data (FR-023/FR-024)', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl');
+
+    setInputValue(root.querySelector('[data-testid="nome-input"]')!, 'Aluguel');
+    fixture.detectChanges();
+
+    root.querySelector<HTMLButtonElement>('[data-testid="voltar-painel-btn"]')!.click();
+    fixture.detectChanges();
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(root.querySelector('[data-testid="exit-confirm-overlay"]')).toBeTruthy();
+
+    root.querySelector<HTMLButtonElement>('[data-testid="continuar-editando-btn"]')!.click();
+    fixture.detectChanges();
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(root.querySelector('[data-testid="exit-confirm-overlay"]')).toBeFalsy();
+    expect(fixture.componentInstance.nome()).toBe('Aluguel');
+  });
+
+  it('"Sair sem salvar" discards the data and navigates to the panel (FR-023/FR-024)', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl');
+
+    setInputValue(root.querySelector('[data-testid="nome-input"]')!, 'Aluguel');
+    fixture.detectChanges();
+    root.querySelector<HTMLButtonElement>('[data-testid="voltar-painel-btn"]')!.click();
+    fixture.detectChanges();
+
+    root.querySelector<HTMLButtonElement>('[data-testid="sair-sem-salvar-btn"]')!.click();
+    fixture.detectChanges();
+
+    expect(navigateSpy).toHaveBeenCalledWith('/');
+    expect(root.querySelector('[data-testid="exit-confirm-overlay"]')).toBeFalsy();
+  });
+
+  it('treats the form as having no unsaved data again after a filled field is manually cleared back to empty (spec edge case, 2026-09-08)', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl');
+
+    const nomeInput = root.querySelector<HTMLInputElement>('[data-testid="nome-input"]')!;
+    setInputValue(nomeInput, 'Aluguel');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.hasUnsavedData()).toBe(true);
+
+    setInputValue(nomeInput, '');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.hasUnsavedData()).toBe(false);
+
+    root.querySelector<HTMLButtonElement>('[data-testid="voltar-painel-btn"]')!.click();
+    fixture.detectChanges();
+
+    expect(navigateSpy).toHaveBeenCalledWith('/');
+    expect(root.querySelector('[data-testid="exit-confirm-overlay"]')).toBeFalsy();
+  });
+
+  it('the success screen offers both "Voltar ao painel" and "Cadastrar outra despesa" (FR-025)', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl');
+
+    fillValidForm(root);
+    fixture.detectChanges();
+    root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
+    fixture.detectChanges();
+
+    const req = httpMock.expectOne('/api/v1/recurring-expenses');
+    req.flush(
+      {
+        id: 'abc-123',
+        name: 'Aluguel',
+        category: 'Housing',
+        monthlyAmount: 1500.5,
+        dueDay: 5,
+        startDate: '2026-09-01',
+        frequency: 'Monthly',
+        status: 'Active',
+        note: null,
+        occurrences: [],
+      } satisfies CreateRecurringExpenseResponse,
+      { status: 201, statusText: 'Created' },
+    );
+    fixture.detectChanges();
+
+    const voltarBtn = root.querySelector<HTMLButtonElement>('[data-testid="voltar-painel-sucesso-btn"]');
+    const novaDespesaBtn = root.querySelector<HTMLButtonElement>('[data-testid="nova-despesa-btn"]');
+    expect(voltarBtn).toBeTruthy();
+    expect(novaDespesaBtn).toBeTruthy();
+
+    voltarBtn!.click();
+    expect(navigateSpy).toHaveBeenCalled();
+    expect(String(navigateSpy.mock.calls[0][0])).toBe('/');
+  });
+
+  it('displays the monetary preview in Euro, not reais (FR-030)', () => {
+    setInputValue(root.querySelector('[data-testid="valor-input"]')!, '3990');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.valorFmt()).toBe('39,90 €');
+    expect(root.textContent).not.toContain('R$');
   });
 });

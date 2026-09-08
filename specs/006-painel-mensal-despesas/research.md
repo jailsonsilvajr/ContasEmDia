@@ -243,3 +243,245 @@ design ("Marcar como paga", "Confirmar", "Cancelar", as setas de navegação,
 por reintroduzir manualmente semântica que um `<button>` nativo já oferece
 de graça, sem nenhum ganho visual (o CSS já usado por `cd-link` se aplica
 igualmente a um `<button>` sem estilo nativo de botão).
+
+---
+
+# Adendo — Requisitos de UX acrescentados em 2026-09-08 (FR-022 a FR-030)
+
+As seções abaixo resolvem as decisões técnicas para os novos requisitos
+funcionais/UX incorporados a `spec.md` na sessão de `/speckit-specify` e
+`/speckit-clarify` de 2026-09-08: cursor de mão (FR-022), navegação/
+confirmação da tela de cadastro e ações da tela de sucesso (FR-023–FR-025,
+que — conforme a clarificação de 2026-09-08 — são implementadas dentro
+desta mesma feature, alterando o componente `cadastro-despesa-recorrente`
+já entregue pela feature 002), responsividade do painel (FR-026/FR-027),
+máscara de moeda (FR-028), seletor de data nativo (FR-029) e exibição em
+Euro (FR-030). Nenhuma dessas decisões introduz endpoint, rota de API ou
+dependência npm nova — são mudanças de frontend (template/componente/CSS)
+sobre os dois componentes já existentes (`painel-mensal-despesas`,
+`cadastro-despesa-recorrente`).
+
+## 9. Cursor de mão em elementos clicáveis, excluindo desabilitados (FR-022)
+
+**Decision**: Cada elemento clicável/interativo de `painel-mensal-despesas`
+e `cadastro-despesa-recorrente` (botões, links-estilizados-como-botão,
+setas de navegação, ícones de ação, o input de data) ganha a classe
+utilitária Tailwind `cursor-pointer`; todo `<button>` que pode ficar
+desabilitado ganha adicionalmente `disabled:cursor-default` (variante
+nativa do Tailwind, que já reage ao atributo `disabled` do elemento sem
+nenhum binding condicional extra no componente).
+
+**Rationale**: O Princípio VIII exige "Tailwind CSS utility classes para
+estilo global e de componente"; uma regra CSS global solta em
+`frontend/src/styles.css` (fora do padrão de utility classes já usado no
+projeto) seria a alternativa mais simples de aplicar, mas foge do que a
+constituição autoriza sem justificativa (a exceção documentada nela é
+apenas para SCSS encapsulado por componente, não para CSS global solto).
+Aplicar `cursor-pointer` por elemento já é o padrão em uso neste mesmo
+componente (o botão "Desfazer" já recebeu `cursor-pointer` na Fase 5/T064
+original) — esta decisão apenas generaliza esse padrão já estabelecido
+para todos os demais elementos clicáveis das duas telas. `disabled:` é uma
+variante nativa do Tailwind (não uma dependência nova), reagindo ao mesmo
+atributo HTML `disabled` que já existe nos botões que hoje ficam
+desabilitados durante carregamento/envio (ex.: "Confirmar" no formulário
+de cadastro durante `isLoading()`).
+
+**Alternatives considered**: Regra CSS global em `styles.css` (`button
+{ cursor: pointer } button:disabled { cursor: default }`, espelhando
+literalmente o `<style>` do design) — descartada por não usar utility
+classes Tailwind, sem uma necessidade concreta que justifique o desvio do
+Princípio VIII (diferente do caso já aceito de SCSS por componente, que
+exige insuficiência demonstrada das utility classes).
+
+## 10. Máscara de moeda compartilhada entre as duas telas (FR-028)
+
+**Decision**: Novo módulo utilitário `frontend/src/app/shared/currency-mask.util.ts`,
+exportando `maskCurrencyDigits(raw: string): string` — porta direta do
+algoritmo já usado no design (`maskMoneyDigits` em `Main.dc.html`/
+`Cadastro.dc.html`: remove tudo que não é dígito, trata os dois últimos
+dígitos como centavos, agrupa milhares com `.` e usa `,` como separador
+decimal, sem símbolo de moeda embutido). `painel-mensal-despesas.component.ts`
+(`onDraftValorInput`) e `cadastro-despesa-recorrente.component.ts`
+(`onValorInput`) passam a aplicar essa função ao valor bruto do evento de
+input antes de gravar no signal correspondente (`draftValor`/`valor`), e o
+próprio `<input>` reflete o valor mascarado via `[value]` (padrão
+Angular/signal já em uso nos dois componentes — sem `ngModel`/two-way
+binding novo). O parsing existente de "vírgula como decimal" no backend e
+nas funções `parseValor`/`onSalvar`/`confirmarPagamento` não muda — a
+máscara só formata o que o usuário vê digitando, sem alterar o formato já
+enviado ao backend.
+
+**Rationale**: FR-028 exige a mesma máscara nos dois campos monetários da
+spec (valor pago no painel, valor previsto no cadastro); duplicar o
+algoritmo em dois arquivos violaria o Princípio V (simplicidade —
+preferir reuso a duplicação, mesmo padrão já seguido por
+`CATEGORY_COLORS`/`CATEGORY_OPTIONS`, reaproveitados de
+`despesa-recorrente.model.ts` por `painel-mensal-despesas.model.ts`). Uma
+pasta `shared/` nova é o mínimo necessário para essa reutilização sem
+introduzir uma dependência ou projeto novo — organizada por
+responsabilidade (utilitário puro, sem UI), não por camada técnica
+genérica, então não conflita com a organização por feature exigida pelo
+Princípio VIII.
+
+**Alternatives considered**: Duplicar a função em cada componente —
+descartada por violar Princípio V. Colocar o utilitário dentro de
+`features/despesa-recorrente/` e importá-lo de `painel-mensal-despesas`
+— descartada por criar uma dependência de uma feature sobre outra,
+quebrando o isolamento por feature que `CATEGORY_COLORS` já contorna hoje
+apenas porque a spec de cadastro é anterior; um utilitário sem relação de
+domínio com nenhuma das duas features pertence a um local neutro
+(`shared/`), não a uma das duas.
+
+## 11. Formatação de valores em Euro, compartilhada (FR-030)
+
+**Decision**: Novo utilitário `frontend/src/app/shared/currency-format.util.ts`,
+exportando `formatEUR(value: number): string` — porta direta do
+`formatEUR` já existente no design (`Main.dc.html`/`Cadastro.dc.html`:
+milhar agrupado com `.`, decimal com `,`, sufixo `" €"`), em vez de
+`Intl.NumberFormat` com uma locale/moeda escolhida por adivinhação (ex.:
+`Intl.NumberFormat('pt-BR', {currency:'EUR'})` produziria `"€ 1.234,56"`,
+com o símbolo antes do valor e possivelmente um espaço diferente do
+protótipo — inconsistente com o design de referência que esta feature deve
+seguir fielmente). Substitui a função local `formatBRL` de
+`painel-mensal-despesas.component.ts` e o `Intl.NumberFormat(...BRL...)`
+usado em `cadastro-despesa-recorrente.component.ts` (`valorFmt`) por esse
+único utilitário compartilhado.
+
+**Rationale**: Mesma razão de reuso do item 10 — os dois componentes
+formatam valores monetários e ambos devem, a partir de FR-030, exibir
+Euro; duplicar a lógica de formatação romperia o Princípio V. Reproduzir
+o algoritmo exato do protótipo (em vez de `Intl.NumberFormat`) garante
+fidelidade pixel-a-pixel ao design de referência (mandato original desta
+feature) sem depender do comportamento de formatação específico de uma
+locale ICU que pode variar por ambiente/navegador.
+
+**Alternatives considered**: `Intl.NumberFormat('de-DE', {style:'currency',
+currency:'EUR'})` (produz `"1.234,56 €"`, mais próximo do design) —
+descartada por depender indiretamente de uma locale alemã em uma aplicação
+inteiramente em PT-BR, e por não garantir determinismo entre ambientes
+Node (testes) e navegador da mesma forma que uma função pura testada
+unitariamente garante.
+
+## 12. Seletor de data nativo (FR-029) — impacto no formato de valor trocado com o backend
+
+**Decision**: Os dois campos de data afetados (`painel-mensal-despesas`:
+`draftData`; `cadastro-despesa-recorrente`: `dataInicio`) passam de
+`type="text"` para `type="date"`. Como o valor nativo de um
+`<input type="date">` é sempre ISO (`yyyy-MM-dd`) ou vazio:
+- Em `cadastro-despesa-recorrente`, isso **simplifica** o componente: o
+  signal `dataInicio` passa a guardar diretamente o valor ISO do input;
+  `parseDataInicio`/`toIsoDate` deixam de ser necessários (o payload
+  `startDate` já é ISO hoje — nenhuma mudança de contrato de API), e
+  `dataInicioError` passa a checar apenas presença (`type="date"` já
+  impede o navegador de submeter uma data inválida/incompleta).
+- Em `painel-mensal-despesas`, o backend continua esperando
+  `paymentDate` como string `dd/MM/yyyy` (`MarkOccurrenceAsPaidUseCase`,
+  `data-model.md`) — nenhuma mudança de contrato de API é feita por esta
+  adição de UX. O componente converte o valor ISO do `<input type="date">`
+  para `dd/MM/yyyy` apenas no momento de montar a chamada
+  `markOccurrenceAsPaid(...)` (nova função utilitária pura, ex.
+  `isoToBrDate`, colocada junto de `formatIsoDateAsBR`/`formatDateAsBR` já
+  existentes no próprio arquivo do componente — sem necessidade de
+  compartilhar com `cadastro-despesa-recorrente`, que não precisa dessa
+  conversão).
+
+**Rationale**: Trocar o mecanismo de entrada de data (nativo vs. texto
+livre) é uma mudança de UX, não uma mudança de contrato de API — manter o
+formato já trafegado (`dd/MM/yyyy` no painel, ISO no cadastro) evita
+qualquer alteração em `backend/Application`/`backend/Api` para este
+requisito puramente de frontend, consistente com o Princípio V
+(simplicidade — não alterar o que já funciona sem necessidade concreta) e
+com o Princípio I (o contrato de API é a fonte da verdade; um requisito de
+UX do cliente não deveria forçar uma renegociação de contrato sem
+necessidade).
+
+**Alternatives considered**: Mudar o backend para aceitar `paymentDate`
+em ISO, alinhando os dois campos ao mesmo formato de trafego — descartada
+por ser uma mudança de contrato de API não pedida por nenhum requisito
+desta spec (FR-029 fala apenas do comportamento do seletor no cliente) e
+por exigir reabrir `MarkOccurrenceAsPaidUseCase`/testes já entregues
+(Fase 4, T034/T042) sem necessidade concreta.
+
+## 13. Responsividade do painel — breakpoints não sobrepostos (FR-026/FR-027)
+
+**Decision**: A grade dos três cartões de resumo usa três classes
+Tailwind não sobrepostas — base (`grid-cols-3`, >720px), uma faixa média
+explícita (`min-[481px]:max-[720px]:grid-cols-2`, 481–720px) e a faixa
+estreita (`max-[480px]:grid-cols-1`, ≤480px) — em vez de duas classes
+`max-[720px]:grid-cols-2`/`max-[480px]:grid-cols-1` que se sobrepõem em
+qualquer largura ≤480px (ambas as condições seriam verdadeiras
+simultaneamente ali, tornando o resultado final dependente da ordem de
+emissão das variantes arbitrárias no CSS gerado pelo Tailwind, que não é
+uma garantia de contrato da ferramenta). Cada coluna da linha de ocorrência
+(`nome`/`status`/`valor`/`dia`/`ações`) ganha `order-{1..5}` condicional
+via `max-[720px]:order-{n}` (mesma ordem de FR-026: nome, status, valor,
+dia, ações) — aqui não há sobreposição de faixas (é uma única condição
+`max-[720px]`, sem uma segunda regra `max-[480px]` conflitante para
+`order`), então o padrão simples de variante única é suficiente.
+
+**Rationale**: Faixas não sobrepostas eliminam qualquer dependência da
+ordem de emissão do CSS gerado (a mesma preocupação seria irrelevante em
+CSS escrito à mão, como no design de referência, porque lá a ordem das
+regras no arquivo é explícita e controlada manualmente — em utility
+classes Tailwind isso não é garantido da mesma forma). Nenhuma dependência
+nova ou arquivo de configuração (`tailwind.config.*`) é necessária —
+Tailwind CSS 4 (já em uso, configurado via `@theme` em
+`frontend/src/styles.css`) suporta variantes arbitrárias de breakpoint
+(`max-[720px]:`, `min-[481px]:`) nativamente.
+
+**Alternatives considered**: Declarar breakpoints nomeados novos no tema
+Tailwind (`@theme { --breakpoint-panel-md: 720px; ... }`) — descartada por
+introduzir um novo conceito de configuração de tema para um requisito que
+afeta apenas dois grupos de elementos em um único componente; variantes
+arbitrárias inline resolvem o mesmo requisito com menos uma camada de
+indireção, consistente com o Princípio V.
+
+## 14. "Voltar ao painel" com confirmação condicional e ação dupla na tela de sucesso (FR-023–FR-025)
+
+**Decision**: `cadastro-despesa-recorrente.component.ts` importa
+`Router`/`RouterLink` (já uma dependência do projeto, introduzida em
+`research.md` §7 para o roteamento do painel) e ganha:
+- Um novo `computed` `hasUnsavedData`, `true` quando qualquer um dos
+  signals do formulário difere de seu valor inicial (`nome`, `valor`,
+  `dia`, `dataInicio`, `observacao` não vazios, ou `categoria`/`status`
+  diferentes de seus padrões `'Housing'`/`'ativa'`) — a mesma definição
+  usada pela clarificação de `spec.md` (edge case: reverter manualmente
+  para o estado inicial volta a contar como "sem dados não salvos", pois é
+  uma comparação de valor, não uma flag "tocou o campo").
+- Um novo signal `showExitConfirmDialog`, controlando a exibição do modal
+  de confirmação (mesmo texto/estrutura de `design/Cadastro.dc.html`,
+  bloco `onCancelExit`/`onConfirmExit`).
+- `onClickVoltar()`: se `hasUnsavedData()` for `false`, navega direto
+  (`router.navigateByUrl('/')`); caso contrário, abre o modal
+  (`showExitConfirmDialog.set(true)`) em vez de navegar.
+- `onCancelExit()`: fecha o modal sem navegar (`showExitConfirmDialog.set(false)`).
+- `onConfirmExit()`: fecha o modal e navega para `/` — sem tentativa de
+  salvamento parcial (FR-024/edge case).
+- No estado de sucesso (`isSuccess()`), o botão novo "Voltar ao painel"
+  usa `routerLink="/"` diretamente (sem verificação de dados não salvos —
+  não há formulário para perder nesse estado; a única saída sem
+  confirmação condicional é aqui e no caso "formulário vazio" acima), ao
+  lado do botão já existente "Cadastrar outra despesa" (`onNovaDespesa()`,
+  já implementado desde `002-cadastro-despesa-recorrente`).
+- Um botão/link "Voltar ao painel" equivalente é adicionado também ao
+  cabeçalho do formulário (estado não-sucesso), reproduzindo a posição de
+  `design/Cadastro.dc.html` (topo, com ícone de seta), chamando
+  `onClickVoltar()`.
+
+**Rationale**: Reaproveita o `Router` já introduzido por esta mesma
+feature (`research.md` §7) — nenhuma dependência nova. A definição de
+"dados não salvos" como comparação de valor (não como flag "tocou") é a
+única leitura consistente com o edge case já adicionado a `spec.md` em
+2026-09-08 ("reverter manualmente para o estado inicial... tratado como
+sem dados não salvos"). Não reabrir `onNovaDespesa()` (já testado desde a
+feature 002) minimiza a superfície de mudança sobre um componente já
+entregue, alinhado ao Princípio V.
+
+**Alternatives considered**: Rastrear "sujeira" do formulário com uma flag
+booleana setada no primeiro evento de `input`/`change` de qualquer campo
+(padrão comum de "formulário tocado") — descartada por contradizer
+diretamente o edge case clarificado (um campo preenchido e depois revertido
+manualmente para vazio deve contar como "sem dados não salvos", o que uma
+flag de "já foi tocado" nunca reverteria automaticamente sem lógica extra
+equivalente à própria comparação de valor, tornando a flag redundante ou
+incorreta).
