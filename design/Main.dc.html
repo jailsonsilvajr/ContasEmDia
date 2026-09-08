@@ -13,45 +13,90 @@
     body { margin: 0; }
     a { color: #2E6FF2; text-decoration: underline; }
     a:hover { color: #1B4FCB; }
+    button { cursor: pointer; }
+    button:disabled { cursor: default; }
     .cd-btn-primary:hover { filter: brightness(0.92); }
     .cd-btn-outline:hover { background: #F2F6FF; }
     .cd-btn-ghost:hover { background: #F2F4F7; }
     .cd-link:hover { opacity: 0.75; }
     .cd-input:focus, .cd-select:focus { outline: none; border-color: #2E6FF2; box-shadow: 0 0 0 3px rgba(46,111,242,0.15); }
+    input[type="date"] { cursor: pointer; }
+    input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.55; }
+    input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+    .cd-page { min-height: 100vh; background: #FAFAF8; font-family: 'Public Sans', system-ui, sans-serif; color: #101828; }
+    .cd-shell { max-width: 1040px; margin: 0 auto; padding: 40px 32px 80px; }
+
+    .cd-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 14px; padding-bottom: 24px; border-bottom: 1px solid #E4E7EC; margin-bottom: 28px; }
+    .cd-header-brand { display: flex; align-items: center; gap: 10px; }
+    .cd-header-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; row-gap: 10px; }
+
+    .cd-alerts { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+    .cd-alert { flex: 1; min-width: 240px; display: flex; align-items: center; gap: 12px; border-radius: 12px; padding: 16px; }
+
+    .cd-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .cd-summary-card { background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 14px; padding: 20px; min-width: 0; }
+    .cd-summary-value { font-family: 'Sora', sans-serif; font-weight: 800; font-size: 26px; margin-top: 8px; overflow-wrap: break-word; }
+
+    .cd-list-header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; row-gap: 6px; margin-bottom: 14px; }
+
+    .cd-item-row { background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .cd-col-name { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 7px; }
+    .cd-col-valor { width: 110px; text-align: right; font-family: 'Sora', sans-serif; font-weight: 700; font-size: 15px; }
+    .cd-col-dia { width: 70px; text-align: center; font-size: 13px; color: #667085; }
+    .cd-col-status { width: 150px; display: flex; justify-content: center; }
+    .cd-col-actions { width: 210px; display: flex; justify-content: flex-end; }
+
+    @media (max-width: 720px) {
+      .cd-shell { padding: 28px 20px 56px; }
+      .cd-summary-grid { grid-template-columns: 1fr 1fr; }
+      .cd-item-row { padding: 14px 16px; gap: 10px; }
+      .cd-col-name { min-width: 100%; order: 1; }
+      .cd-col-status { width: auto; order: 2; justify-content: flex-start; }
+      .cd-col-valor { width: auto; order: 3; text-align: left; }
+      .cd-col-dia { width: auto; order: 4; text-align: left; }
+      .cd-col-actions { width: 100%; order: 5; justify-content: flex-start; margin-top: 2px; }
+    }
+    @media (max-width: 480px) {
+      .cd-shell { padding: 22px 14px 48px; }
+      .cd-summary-grid { grid-template-columns: 1fr; }
+      .cd-alert { min-width: 0; flex-basis: 100%; }
+      .cd-header-actions { width: 100%; justify-content: space-between; }
+    }
   </style>
 </helmet>
 
-<div style="min-height: 100vh; background: #FAFAF8; font-family: 'Public Sans', system-ui, sans-serif; color: #101828;">
-  <div style="max-width: 1040px; margin: 0 auto; padding: 40px 32px 80px;">
+<div class="cd-page">
+  <div class="cd-shell">
 
-    <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid #E4E7EC; margin-bottom: 28px;">
-      <div style="display: flex; align-items: center; gap: 10px;">
+    <div class="cd-header">
+      <div class="cd-header-brand">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="9"></circle>
           <path d="M8 12.5l2.5 2.5 5.5-6"></path>
         </svg>
         <span style="font-family: 'Sora', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.01em;">ContasEmDia</span>
       </div>
-      <div style="display: flex; align-items: center; gap: 14px;">
+      <div class="cd-header-actions">
         <div style="display: flex; align-items: center; gap: 4px; background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 10px; padding: 6px 8px;">
-          <button class="cd-btn-ghost" style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: transparent; border: none; border-radius: 6px; cursor: default; padding: 0;">
+          <button class="cd-btn-ghost" style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: transparent; border: none; border-radius: 6px; cursor: pointer; padding: 0;">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
           </button>
           <span style="font-family: 'Sora', sans-serif; font-weight: 600; font-size: 14px; padding: 0 6px; white-space: nowrap;">Agosto 2026</span>
-          <button class="cd-btn-ghost" style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: transparent; border: none; border-radius: 6px; cursor: default; padding: 0;">
+          <button class="cd-btn-ghost" style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: transparent; border: none; border-radius: 6px; cursor: pointer; padding: 0;">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
           </button>
         </div>
-        <button class="cd-btn-primary" style="display: flex; align-items: center; gap: 8px; background: {{accent}}; color: #FFFFFF; border: none; border-radius: 10px; padding: 10px 16px; font-weight: 600; font-size: 14px; cursor: default; font-family: 'Public Sans', sans-serif;">
+        <button class="cd-btn-primary" style="display: flex; align-items: center; gap: 8px; background: {{accent}}; color: #FFFFFF; border: none; border-radius: 10px; padding: 10px 16px; font-weight: 600; font-size: 14px; cursor: pointer; font-family: 'Public Sans', sans-serif; white-space: nowrap;">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
           Nova despesa
         </button>
       </div>
     </div>
 
-    <div style="display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap;">
+    <div class="cd-alerts">
       <sc-if value="{{hasVencidas}}" hint-placeholder-val="{{true}}">
-        <div style="flex: 1; min-width: 240px; display: flex; align-items: center; gap: 12px; background: #FDECEA; border: 1px solid #F7C8C2; border-radius: 12px; padding: 16px;">
+        <div class="cd-alert" style="background: #FDECEA; border: 1px solid #F7C8C2;">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#C0362C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
             <path d="M10.3 3.9l-8 14A1.5 1.5 0 0 0 3.6 20h16.8a1.5 1.5 0 0 0 1.3-2.1l-8-14a1.5 1.5 0 0 0-2.6 0z"></path>
             <path d="M12 9v4"></path><path d="M12 16.5v.01"></path>
@@ -63,7 +108,7 @@
         </div>
       </sc-if>
       <sc-if value="{{hasVenceEmBreve}}" hint-placeholder-val="{{true}}">
-        <div style="flex: 1; min-width: 240px; display: flex; align-items: center; gap: 12px; background: #FFF6E5; border: 1px solid #F5DDA0; border-radius: 12px; padding: 16px;">
+        <div class="cd-alert" style="background: #FFF6E5; border: 1px solid #F5DDA0;">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#9A6300" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
             <circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path>
           </svg>
@@ -75,45 +120,45 @@
       </sc-if>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 32px;">
-      <div style="background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 14px; padding: 20px;">
+    <div class="cd-summary-grid">
+      <div class="cd-summary-card">
         <div style="font-size: 12px; font-weight: 600; color: #667085; text-transform: uppercase; letter-spacing: 0.04em;">Total previsto no mês</div>
-        <div style="font-family: 'Sora', sans-serif; font-weight: 800; font-size: 26px; margin-top: 8px;">{{totalPrevistoFmt}}</div>
+        <div class="cd-summary-value">{{totalPrevistoFmt}}</div>
       </div>
-      <div style="background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 14px; padding: 20px;">
+      <div class="cd-summary-card">
         <div style="font-size: 12px; font-weight: 600; color: #667085; text-transform: uppercase; letter-spacing: 0.04em;">Total pago</div>
-        <div style="font-family: 'Sora', sans-serif; font-weight: 800; font-size: 26px; margin-top: 8px; color: #0F7B4E;">{{totalPagoFmt}}</div>
+        <div class="cd-summary-value" style="color: #0F7B4E;">{{totalPagoFmt}}</div>
       </div>
-      <div style="background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 14px; padding: 20px;">
+      <div class="cd-summary-card">
         <div style="font-size: 12px; font-weight: 600; color: #667085; text-transform: uppercase; letter-spacing: 0.04em;">Total pendente</div>
-        <div style="font-family: 'Sora', sans-serif; font-weight: 800; font-size: 26px; margin-top: 8px;">{{totalPendenteFmt}}</div>
+        <div class="cd-summary-value">{{totalPendenteFmt}}</div>
       </div>
     </div>
 
-    <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">
+    <div class="cd-list-header">
       <h2 style="font-family: 'Sora', sans-serif; font-weight: 700; font-size: 18px; margin: 0;">Contas de Agosto 2026</h2>
       <span style="font-size: 13px; color: #667085;">{{itemCount}} contas</span>
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 10px;">
       <sc-for list="{{items}}" as="it" hint-placeholder-count="4">
-        <div style="background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <div class="cd-item-row">
 
-          <div style="flex: 1; min-width: 180px; display: flex; align-items: center; gap: 7px;">
+          <div class="cd-col-name">
             <span style="width: 8px; height: 8px; border-radius: 50%; background: {{it.catColor}}; flex-shrink: 0;"></span>
             <span style="font-weight: 700; font-size: 15px;">{{it.nome}}</span>
             <span style="font-size: 13px; color: #667085;">· {{it.categoria}}</span>
           </div>
 
-          <div style="width: 110px; text-align: right; font-family: 'Sora', sans-serif; font-weight: 700; font-size: 15px;">{{it.valorPrevistoFmt}}</div>
+          <div class="cd-col-valor">{{it.valorPrevistoFmt}}</div>
 
-          <div style="width: 70px; text-align: center; font-size: 13px; color: #667085;">{{it.diaLabel}}</div>
+          <div class="cd-col-dia">{{it.diaLabel}}</div>
 
-          <div style="width: 150px; display: flex; justify-content: center;">
+          <div class="cd-col-status">
             <span style="padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; background: {{it.statusBg}}; color: {{it.statusColor}};">{{it.statusLabel}}</span>
           </div>
 
-          <div style="width: 210px; display: flex; justify-content: flex-end;">
+          <div class="cd-col-actions">
             <sc-if value="{{it.isNotEditing}}" hint-placeholder-val="{{true}}">
               <sc-if value="{{it.notPaid}}" hint-placeholder-val="{{true}}">
                 <button class="cd-btn-outline" onClick="{{it.onIniciar}}" style="background: #FFFFFF; border: 1.5px solid {{accent}}; color: {{accent}}; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: 'Public Sans', sans-serif; white-space: nowrap;">Marcar como paga</button>
@@ -133,12 +178,12 @@
               </sc-if>
             </sc-if>
             <sc-if value="{{it.isEditing}}" hint-placeholder-val="{{false}}">
-              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; width: 190px;">
+              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; width: 190px; max-width: 100%;">
                 <div style="display: flex; align-items: center; gap: 6px; width: 100%;">
-                  <span style="font-size: 12px; color: #667085;">R$</span>
-                  <input class="cd-input" type="text" value="{{it.draftValor}}" onChange="{{onChangeValor}}" style="flex: 1; padding: 6px 8px; border: 1px solid #D0D5DD; border-radius: 6px; font-size: 13px; font-family: 'Public Sans', sans-serif;" />
+                  <span style="font-size: 12px; color: #667085;">€</span>
+                  <input class="cd-input" type="text" inputmode="decimal" value="{{it.draftValor}}" onChange="{{onChangeValor}}" placeholder="0,00" style="flex: 1; padding: 6px 8px; border: 1px solid #D0D5DD; border-radius: 6px; font-size: 13px; font-family: 'Public Sans', sans-serif;" />
                 </div>
-                <input class="cd-input" type="text" value="{{it.draftData}}" onChange="{{onChangeData}}" placeholder="dd/mm/aaaa" style="width: 100%; padding: 6px 8px; border: 1px solid #D0D5DD; border-radius: 6px; font-size: 13px; font-family: 'Public Sans', sans-serif;" />
+                <input class="cd-input" type="date" value="{{it.draftData}}" onChange="{{onChangeData}}" onClick="{{onOpenDatePicker}}" style="width: 100%; padding: 6px 8px; border: 1px solid #D0D5DD; border-radius: 6px; font-size: 13px; font-family: 'Public Sans', sans-serif; cursor: pointer;" />
                 <div style="display: flex; gap: 8px;">
                   <button class="cd-btn-primary" onClick="{{it.onConfirmar}}" style="background: {{accent}}; color: #FFFFFF; border: none; border-radius: 6px; padding: 7px 12px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: 'Public Sans', sans-serif;">Confirmar</button>
                   <button class="cd-btn-ghost" onClick="{{it.onCancelarItem}}" style="background: transparent; color: #667085; border: none; border-radius: 6px; padding: 7px 8px; font-size: 13px; cursor: pointer; font-family: 'Public Sans', sans-serif;">Cancelar</button>
@@ -155,9 +200,39 @@
 </div>
 </x-dc>
 <script data-dc-script data-props='{"accent":{"editor":"color","default":"#2E6FF2","options":["#2E6FF2","#12406B","#0E9384","#7A5AF8"]}}'>
-function formatBRL(v) {
-  if (v == null || isNaN(v)) return 'R$ 0,00';
-  return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function maskMoneyDigits(raw) {
+  var digits = (raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  digits = digits.replace(/^0+/, '') || '0';
+  while (digits.length < 3) digits = '0' + digits;
+  var intPart = digits.slice(0, -2);
+  var centsPart = digits.slice(-2);
+  intPart = intPart.replace(/^0+(?=\d)/, '');
+  intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return intPart + ',' + centsPart;
+}
+
+function parseMasked(str) {
+  if (str == null || str === '') return NaN;
+  return parseFloat(String(str).replace(/\./g, '').replace(',', '.'));
+}
+
+function valueToMasked(num) {
+  var cents = Math.round((num || 0) * 100).toString();
+  return maskMoneyDigits(cents);
+}
+
+function formatEUR(v) {
+  if (v == null || isNaN(v)) v = 0;
+  var parts = Math.abs(v).toFixed(2).split('.');
+  var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (v < 0 ? '-' : '') + intPart + ',' + parts[1] + ' €';
+}
+
+function formatDateBR(iso) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if (!m) return iso || '';
+  return m[3] + '/' + m[2] + '/' + m[1];
 }
 
 var CATEGORY_COLORS = {
@@ -178,9 +253,9 @@ class Component extends DCLogic {
     occurrences: [
       { id: 1, nome: 'Aluguel', categoria: 'Moradia', valorPrevisto: 1500.00, dia: 10, paid: false, valorPago: null, dataPagamento: null },
       { id: 2, nome: 'Água', categoria: 'Serviços', valorPrevisto: 92.40, dia: 15, paid: false, valorPago: null, dataPagamento: null },
-      { id: 3, nome: 'Internet', categoria: 'Serviços', valorPrevisto: 119.90, dia: 5, paid: true, valorPago: 119.90, dataPagamento: '04/08/2026' },
+      { id: 3, nome: 'Internet', categoria: 'Serviços', valorPrevisto: 119.90, dia: 5, paid: true, valorPago: 119.90, dataPagamento: '2026-08-04' },
       { id: 4, nome: 'Energia', categoria: 'Serviços', valorPrevisto: 214.30, dia: 20, paid: false, valorPago: null, dataPagamento: null },
-      { id: 5, nome: 'Netflix', categoria: 'Assinaturas', valorPrevisto: 55.90, dia: 8, paid: true, valorPago: 59.90, dataPagamento: '08/08/2026' },
+      { id: 5, nome: 'Netflix', categoria: 'Assinaturas', valorPrevisto: 55.90, dia: 8, paid: true, valorPago: 59.90, dataPagamento: '2026-08-08' },
       { id: 6, nome: 'Academia', categoria: 'Outra', valorPrevisto: 129.00, dia: 25, paid: false, valorPago: null, dataPagamento: null },
       { id: 7, nome: 'Seguro do Carro', categoria: 'Transporte', valorPrevisto: 340.00, dia: 12, paid: false, valorPago: null, dataPagamento: null },
       { id: 8, nome: 'Spotify Família', categoria: 'Assinaturas', valorPrevisto: 34.90, dia: 30, paid: false, valorPago: null, dataPagamento: null }
@@ -191,8 +266,8 @@ class Component extends DCLogic {
     var o = this.state.occurrences.find(function (x) { return x.id === id; });
     this.setState({
       editingId: id,
-      draftValor: o.valorPrevisto.toFixed(2).replace('.', ','),
-      draftData: '18/08/2026'
+      draftValor: valueToMasked(o.valorPrevisto),
+      draftData: '2026-08-18'
     });
   };
 
@@ -201,23 +276,29 @@ class Component extends DCLogic {
   };
 
   onChangeValor = (e) => {
-    this.setState({ draftValor: e.target.value });
+    this.setState({ draftValor: maskMoneyDigits(e.target.value) });
   };
 
   onChangeData = (e) => {
     this.setState({ draftData: e.target.value });
   };
 
+  onOpenDatePicker = (e) => {
+    if (e.target && typeof e.target.showPicker === 'function') {
+      try { e.target.showPicker(); } catch (err) {}
+    }
+  };
+
   confirmarPagamento = (id) => {
     var draftValor = this.state.draftValor;
     var draftData = this.state.draftData;
-    var parsed = parseFloat(String(draftValor).replace(',', '.'));
+    var parsed = parseMasked(draftValor);
     this.setState({
       editingId: null,
       occurrences: this.state.occurrences.map(function (o) {
         if (o.id !== id) return o;
         var valorFinal = isNaN(parsed) ? o.valorPrevisto : parsed;
-        return Object.assign({}, o, { paid: true, valorPago: valorFinal, dataPagamento: draftData || '18/08/2026' });
+        return Object.assign({}, o, { paid: true, valorPago: valorFinal, dataPagamento: draftData || '2026-08-18' });
       })
     });
   };
@@ -266,7 +347,7 @@ class Component extends DCLogic {
         categoria: o.categoria,
         catColor: CATEGORY_COLORS[o.categoria] || '#667085',
         diaLabel: 'Dia ' + o.dia,
-        valorPrevistoFmt: formatBRL(o.valorPrevisto),
+        valorPrevistoFmt: formatEUR(o.valorPrevisto),
         statusLabel: meta.label,
         statusBg: meta.bg,
         statusColor: meta.color,
@@ -274,8 +355,8 @@ class Component extends DCLogic {
         notPaid: !o.paid,
         isEditing: isEditing,
         isNotEditing: !isEditing,
-        valorPagoFmt: o.paid ? formatBRL(o.valorPago) : '',
-        dataPagamentoLabel: o.paid ? o.dataPagamento : '',
+        valorPagoFmt: o.paid ? formatEUR(o.valorPago) : '',
+        dataPagamentoLabel: o.paid ? formatDateBR(o.dataPagamento) : '',
         valorDiferente: valorDiferente,
         notDiferente: !valorDiferente,
         draftValor: isEditing ? self.state.draftValor : '',
@@ -291,16 +372,17 @@ class Component extends DCLogic {
       accent: this.props.accent ?? '#2E6FF2',
       items: items,
       itemCount: items.length,
-      totalPrevistoFmt: formatBRL(totalPrevisto),
-      totalPagoFmt: formatBRL(totalPago),
-      totalPendenteFmt: formatBRL(totalPendente),
+      totalPrevistoFmt: formatEUR(totalPrevisto),
+      totalPagoFmt: formatEUR(totalPago),
+      totalPendenteFmt: formatEUR(totalPendente),
       hasVencidas: vencidasCount > 0,
       vencidasCount: vencidasCount,
       hasVenceEmBreve: venceEmBreveCount > 0,
       venceEmBreveCount: venceEmBreveCount,
-      totalAVencerFmt: formatBRL(totalAVencer),
+      totalAVencerFmt: formatEUR(totalAVencer),
       onChangeValor: this.onChangeValor,
-      onChangeData: this.onChangeData
+      onChangeData: this.onChangeData,
+      onOpenDatePicker: this.onOpenDatePicker
     };
   }
 }

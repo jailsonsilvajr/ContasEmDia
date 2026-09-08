@@ -2,6 +2,8 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { PainelMensalDespesasService } from './painel-mensal-despesas.service';
+import { maskCurrencyDigits } from '../../shared/currency-mask.util';
+import { formatEUR } from '../../shared/currency-format.util';
 import {
   CATEGORY_COLORS,
   CATEGORY_OPTIONS,
@@ -25,10 +27,6 @@ const MONTH_NAMES = [
   'Dezembro',
 ];
 
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-}
-
 function dayOfIsoDate(iso: string): number {
   return Number(iso.slice(8, 10));
 }
@@ -38,10 +36,11 @@ function formatIsoDateAsBR(iso: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function formatDateAsBR(date: Date): string {
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  return `${day}/${month}/${date.getFullYear()}`;
+function formatDateAsIso(date: Date): string {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export interface PanelDisplayItem {
@@ -97,14 +96,14 @@ export class PainelMensalDespesasComponent implements OnInit {
         nome: occurrence.name,
         categoria: categoriaLabel,
         catColor: CATEGORY_COLORS[occurrence.category] ?? '#667085',
-        valorPrevistoFmt: formatBRL(occurrence.expectedAmount),
+        valorPrevistoFmt: formatEUR(occurrence.expectedAmount),
         diaLabel: `Dia ${dayOfIsoDate(occurrence.dueDate)}`,
         statusLabel: meta.label,
         statusBg: meta.bg,
         statusColor: meta.color,
         paid,
         notPaid: !paid,
-        valorPagoFmt: paid && occurrence.paidAmount != null ? formatBRL(occurrence.paidAmount) : '',
+        valorPagoFmt: paid && occurrence.paidAmount != null ? formatEUR(occurrence.paidAmount) : '',
         dataPagamentoLabel: paid && occurrence.paymentDate ? formatIsoDateAsBR(occurrence.paymentDate) : '',
         valorDiferente,
         isEditing: occurrence.id === editingId,
@@ -128,9 +127,9 @@ export class PainelMensalDespesasComponent implements OnInit {
       .reduce((sum, occurrence) => sum + occurrence.expectedAmount, 0),
   );
 
-  readonly totalPrevistoFmt = computed(() => formatBRL(this.totalPrevisto()));
-  readonly totalPagoFmt = computed(() => formatBRL(this.totalPago()));
-  readonly totalPendenteFmt = computed(() => formatBRL(this.totalPendente()));
+  readonly totalPrevistoFmt = computed(() => formatEUR(this.totalPrevisto()));
+  readonly totalPagoFmt = computed(() => formatEUR(this.totalPago()));
+  readonly totalPendenteFmt = computed(() => formatEUR(this.totalPendente()));
 
   readonly vencidasCount = computed(
     () => this.occurrences().filter((occurrence) => occurrence.status === 'Overdue').length,
@@ -146,7 +145,7 @@ export class PainelMensalDespesasComponent implements OnInit {
       .filter((occurrence) => occurrence.status === 'DueSoon')
       .reduce((sum, occurrence) => sum + occurrence.expectedAmount, 0),
   );
-  readonly totalAVencerFmt = computed(() => formatBRL(this.totalAVencer()));
+  readonly totalAVencerFmt = computed(() => formatEUR(this.totalAVencer()));
 
   ngOnInit(): void {
     this.load();
@@ -165,8 +164,8 @@ export class PainelMensalDespesasComponent implements OnInit {
     if (!occurrence) return;
 
     this.editingOccurrenceId.set(occurrenceId);
-    this.draftValor.set(occurrence.expectedAmount.toFixed(2).replace('.', ','));
-    this.draftData.set(formatDateAsBR(new Date()));
+    this.draftValor.set(maskCurrencyDigits(String(Math.round(occurrence.expectedAmount * 100))));
+    this.draftData.set(formatDateAsIso(new Date()));
   }
 
   cancelarEdicao(): void {
@@ -176,7 +175,8 @@ export class PainelMensalDespesasComponent implements OnInit {
   }
 
   confirmarPagamento(occurrenceId: string): void {
-    this.painelService.markOccurrenceAsPaid(occurrenceId, this.draftValor(), this.draftData()).subscribe({
+    const paymentDateParam = this.draftData() ? formatIsoDateAsBR(this.draftData()) : '';
+    this.painelService.markOccurrenceAsPaid(occurrenceId, this.draftValor(), paymentDateParam).subscribe({
       next: (envelope) => {
         if (envelope.success && envelope.data) {
           this.replaceOccurrence(envelope.data.occurrence);
@@ -199,7 +199,7 @@ export class PainelMensalDespesasComponent implements OnInit {
   }
 
   onDraftValorInput(event: Event): void {
-    this.draftValor.set((event.target as HTMLInputElement).value);
+    this.draftValor.set(maskCurrencyDigits((event.target as HTMLInputElement).value));
   }
 
   onDraftDataInput(event: Event): void {
