@@ -7,6 +7,14 @@ import { DespesaPreviewComponent } from '../despesa-preview/despesa-preview.comp
 import { maskCurrencyDigits } from '../../../shared/currency-mask.util';
 import { formatEUR } from '../../../shared/currency-format.util';
 import {
+  parseValor,
+  parseDia,
+  getNomeError,
+  getValorError,
+  getDiaError,
+  getDataInicioError,
+} from '../../../shared/recurring-expense-form.util';
+import {
   CATEGORY_COLORS,
   CATEGORY_OPTIONS,
   type ApiErrorResponse,
@@ -31,21 +39,6 @@ function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
     value !== null &&
     Array.isArray((value as { errors?: unknown }).errors)
   );
-}
-
-function parseValor(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const normalized = trimmed.includes(',') ? trimmed.replace(/\./g, '').replace(',', '.') : trimmed;
-  if (!/^\d+(\.\d+)?$/.test(normalized)) return null;
-  const num = Number(normalized);
-  return Number.isFinite(num) ? num : null;
-}
-
-function parseDia(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (!/^\d+$/.test(trimmed)) return null;
-  return Number(trimmed);
 }
 
 const DEFAULT_CATEGORIA: CategoryValue = 'Housing';
@@ -102,30 +95,10 @@ export class CadastroDespesaRecorrenteComponent {
   readonly isSuccess = computed(() => this.formStatus() === 'success');
   readonly isError = computed(() => this.formStatus() === 'error');
 
-  readonly nomeError = computed(() => {
-    const trimmed = this.nome().trim();
-    if (!trimmed) return 'Nome é obrigatório.';
-    if (trimmed.length > 100) return 'Nome deve ter no máximo 100 caracteres.';
-    return this.apiFieldErrors().name ?? null;
-  });
-  readonly valorError = computed(() => {
-    const raw = this.valor().trim();
-    const decimals = raw.includes(',') ? raw.split(',')[1] : raw.split('.')[1];
-    const num = parseValor(raw);
-    if (num === null) return 'Valor previsto mensal é obrigatório e deve ser um número válido.';
-    if (num <= 0) return 'Valor previsto mensal deve ser maior que zero.';
-    if (decimals && decimals.length > 2) return 'Valor previsto mensal deve ter no máximo duas casas decimais.';
-    return null;
-  });
-  readonly diaError = computed(() => {
-    const dia = parseDia(this.dia());
-    if (dia === null || dia < 1 || dia > 31) return 'Dia de vencimento deve ser um número entre 1 e 31.';
-    return null;
-  });
-  readonly dataInicioError = computed(() => {
-    if (!this.dataInicio().trim()) return 'Data de início é obrigatória.';
-    return null;
-  });
+  readonly nomeError = computed(() => getNomeError(this.nome()) ?? this.apiFieldErrors().name ?? null);
+  readonly valorError = computed(() => getValorError(this.valor()));
+  readonly diaError = computed(() => getDiaError(this.dia()));
+  readonly dataInicioError = computed(() => getDataInicioError(this.dataInicio()));
   readonly isFormValid = computed(
     () => !this.nomeError() && !this.valorError() && !this.diaError() && !this.dataInicioError(),
   );
