@@ -45,6 +45,7 @@ function formatDateAsIso(date: Date): string {
 
 export interface PanelDisplayItem {
   id: string;
+  recurringExpenseId: string;
   nome: string;
   categoria: string;
   catColor: string;
@@ -93,6 +94,7 @@ export class PainelMensalDespesasComponent implements OnInit {
 
       return {
         id: occurrence.id,
+        recurringExpenseId: occurrence.recurringExpenseId,
         nome: occurrence.name,
         categoria: categoriaLabel,
         catColor: CATEGORY_COLORS[occurrence.category] ?? '#667085',

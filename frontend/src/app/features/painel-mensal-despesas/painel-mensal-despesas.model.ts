@@ -1,7 +1,7 @@
-import { CATEGORY_COLORS, CATEGORY_OPTIONS, type CategoryValue, type FieldError } from '../despesa-recorrente/despesa-recorrente.model';
+import { CATEGORY_COLORS, CATEGORY_OPTIONS, type ApiEnvelope, type CategoryValue } from '../despesa-recorrente/despesa-recorrente.model';
 
 export { CATEGORY_COLORS, CATEGORY_OPTIONS };
-export type { CategoryValue };
+export type { ApiEnvelope, CategoryValue };
 
 export type DerivedStatusValue = 'Paid' | 'Overdue' | 'DueSoon' | 'Pending';
 
@@ -25,6 +25,7 @@ export interface ReferencePeriodResponse {
 
 export interface PanelOccurrenceResponse {
   id: string;
+  recurringExpenseId: string;
   name: string;
   category: CategoryValue;
   expectedAmount: number;
@@ -45,10 +46,4 @@ export interface MarkOccurrenceAsPaidResponse {
 
 export interface UndoOccurrencePaymentResponse {
   occurrence: PanelOccurrenceResponse;
-}
-
-export interface ApiEnvelope<T> {
-  success: boolean;
-  data: T | null;
-  errors: FieldError[] | null;
 }

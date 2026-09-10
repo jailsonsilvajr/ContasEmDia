@@ -66,6 +66,7 @@ describe('PainelMensalDespesasService', () => {
       data: {
         occurrence: {
           id: 'abc-123',
+          recurringExpenseId: 'expense-abc',
           name: 'Aluguel',
           category: 'Housing',
           expectedAmount: 1500,
@@ -95,6 +96,7 @@ describe('PainelMensalDespesasService', () => {
       data: {
         occurrence: {
           id: 'abc-123',
+          recurringExpenseId: 'expense-abc',
           name: 'Aluguel',
           category: 'Housing',
           expectedAmount: 1500,
