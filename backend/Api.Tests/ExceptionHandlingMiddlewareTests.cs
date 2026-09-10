@@ -51,6 +51,49 @@ public sealed class ExceptionHandlingMiddlewareTests : IClassFixture<ThrowingRep
         Assert.DoesNotContain("RecurringExpenseRepository", body);
         Assert.DoesNotContain("StackTrace", body, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task GetById_WhenPersistenceThrows_Returns500WithGenericEnvelopeAndNoExceptionDetails()
+    {
+        var response = await _client.GetAsync($"/api/v1/recurring-expenses/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var root = JsonDocument.Parse(body).RootElement;
+
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("data").ValueKind);
+        Assert.Single(root.GetProperty("errors").EnumerateArray());
+        Assert.DoesNotContain("StackTrace", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Put_WhenPersistenceThrows_Returns500WithGenericEnvelopeAndNoExceptionDetails()
+    {
+        var payload = new
+        {
+            name = "Aluguel",
+            category = "Housing",
+            monthlyAmount = 1850.00m,
+            dueDay = 10,
+            startDate = "2026-09-01",
+            status = "Active",
+            note = (string?)null
+        };
+
+        var response = await _client.PutAsJsonAsync($"/api/v1/recurring-expenses/{Guid.NewGuid()}", payload);
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var root = JsonDocument.Parse(body).RootElement;
+
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("data").ValueKind);
+        Assert.Single(root.GetProperty("errors").EnumerateArray());
+        Assert.DoesNotContain("StackTrace", body, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public sealed class DomainRuleViolationMiddlewareTests : IClassFixture<AlreadyPaidOccurrenceWebApplicationFactory>
@@ -241,7 +284,8 @@ internal sealed class ThrowingRecurringExpenseRepository : IRecurringExpenseRepo
     public Task AddAsync(RecurringExpense recurringExpense) =>
         throw new InvalidOperationException("Simulated persistence failure for testing the 500 safety net.");
 
-    public Task<RecurringExpense?> GetByIdAsync(Guid id) => throw new NotImplementedException();
+    public Task<RecurringExpense?> GetByIdAsync(Guid id) =>
+        throw new InvalidOperationException("Simulated persistence failure for testing the 500 safety net.");
 
     public Task<IReadOnlyCollection<RecurringExpense>> GetActiveAsync() => throw new NotImplementedException();
 

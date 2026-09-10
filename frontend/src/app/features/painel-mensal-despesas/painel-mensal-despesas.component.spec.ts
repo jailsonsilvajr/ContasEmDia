@@ -23,6 +23,7 @@ function setInputValue(input: HTMLInputElement, value: string): void {
 function makeOccurrence(overrides: Partial<PanelOccurrenceResponse>): PanelOccurrenceResponse {
   return {
     id: 'id-1',
+    recurringExpenseId: 'recurring-1',
     name: 'Aluguel',
     category: 'Housing',
     expectedAmount: 1500,
@@ -531,5 +532,26 @@ describe('PainelMensalDespesasComponent', () => {
     expect(navigateSpy).toHaveBeenCalled();
     const navigatedUrl = navigateSpy.mock.calls[0][0];
     expect(String(navigatedUrl)).toBe('/despesas/nova');
+  });
+
+  it('the edit icon on a row navigates to the owning recurring expense id, not the occurrence id', () => {
+    const fixture = createAndFlush({
+      success: true,
+      data: {
+        referencePeriod: { year: 2026, month: 8 },
+        occurrences: [makeOccurrence({ id: 'occurrence-1', recurringExpenseId: 'expense-1' })],
+      },
+      errors: null,
+    });
+
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    (compiled.querySelector('[data-testid="editar-btn"]') as HTMLButtonElement).click();
+
+    expect(navigateSpy).toHaveBeenCalled();
+    const navigatedUrl = String(navigateSpy.mock.calls[0][0]);
+    expect(navigatedUrl).toBe('/despesas/expense-1/editar');
   });
 });

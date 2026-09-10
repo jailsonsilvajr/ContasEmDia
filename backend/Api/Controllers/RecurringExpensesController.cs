@@ -2,6 +2,8 @@ using ContasEmDia.Api.Mappings;
 using ContasEmDia.Api.Requests;
 using ContasEmDia.Api.Responses;
 using ContasEmDia.Application.UseCases.CreateRecurringExpense;
+using ContasEmDia.Application.UseCases.GetRecurringExpenseById;
+using ContasEmDia.Application.UseCases.UpdateRecurringExpense;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ContasEmDia.Api.Controllers;
@@ -11,10 +13,17 @@ namespace ContasEmDia.Api.Controllers;
 public sealed class RecurringExpensesController : ControllerBase
 {
     private readonly ICreateRecurringExpenseUseCase _createRecurringExpenseUseCase;
+    private readonly IGetRecurringExpenseByIdUseCase _getRecurringExpenseByIdUseCase;
+    private readonly IUpdateRecurringExpenseUseCase _updateRecurringExpenseUseCase;
 
-    public RecurringExpensesController(ICreateRecurringExpenseUseCase createRecurringExpenseUseCase)
+    public RecurringExpensesController(
+        ICreateRecurringExpenseUseCase createRecurringExpenseUseCase,
+        IGetRecurringExpenseByIdUseCase getRecurringExpenseByIdUseCase,
+        IUpdateRecurringExpenseUseCase updateRecurringExpenseUseCase)
     {
         _createRecurringExpenseUseCase = createRecurringExpenseUseCase;
+        _getRecurringExpenseByIdUseCase = getRecurringExpenseByIdUseCase;
+        _updateRecurringExpenseUseCase = updateRecurringExpenseUseCase;
     }
 
     [HttpPost]
@@ -31,5 +40,33 @@ public sealed class RecurringExpensesController : ControllerBase
         }
 
         return StatusCode(StatusCodes.Status201Created, ApiResponse<CreateRecurringExpenseDataResponse>.Success(output.ToDataResponse()));
+    }
+
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<RecurringExpenseDataResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<RecurringExpenseDataResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse<RecurringExpenseDataResponse>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var output = await _getRecurringExpenseByIdUseCase.ExecuteAsync(new GetRecurringExpenseByIdUseCaseInput { Id = id });
+
+        return Ok(ApiResponse<RecurringExpenseDataResponse>.Success(output.RecurringExpense.ToDataResponse()));
+    }
+
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<RecurringExpenseDataResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<RecurringExpenseDataResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<RecurringExpenseDataResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse<RecurringExpenseDataResponse>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Put(Guid id, [FromBody] UpdateRecurringExpenseDataRequest request)
+    {
+        var output = await _updateRecurringExpenseUseCase.ExecuteAsync(request.ToUseCaseInput(id));
+
+        if (!output.IsSuccess)
+        {
+            return BadRequest(ApiResponse<RecurringExpenseDataResponse>.Failure(output.Errors.ToApiErrors()));
+        }
+
+        return Ok(ApiResponse<RecurringExpenseDataResponse>.Success(output.RecurringExpense!.ToDataResponse()));
     }
 }

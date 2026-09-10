@@ -13,6 +13,7 @@ public static class GetMonthlyPanelDataResponseMapping
     public static PanelOccurrenceDataResponse ToPanelOccurrenceDataResponse(this PanelOccurrenceData occurrence) =>
         new(
             Id: occurrence.Id,
+            RecurringExpenseId: occurrence.RecurringExpenseId,
             Name: occurrence.Name,
             Category: occurrence.Category,
             ExpectedAmount: occurrence.ExpectedAmount,

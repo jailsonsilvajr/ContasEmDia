@@ -1,0 +1,371 @@
+@if (isLoadingDados()) {
+  <section class="mx-auto max-w-[900px] space-y-6 p-6" data-testid="loading-view" role="status" aria-live="polite" aria-label="Carregando dados da despesa">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+      <div class="flex flex-[1.4] flex-col gap-[18px]">
+        <div class="h-3 w-16 animate-pulse rounded bg-[#ECEEF1]"></div>
+        <div class="h-11 w-full animate-pulse rounded-lg bg-[#ECEEF1]"></div>
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div class="h-11 animate-pulse rounded-lg bg-[#ECEEF1]"></div>
+          <div class="h-11 animate-pulse rounded-lg bg-[#ECEEF1]"></div>
+        </div>
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div class="h-11 animate-pulse rounded-lg bg-[#ECEEF1]"></div>
+          <div class="h-11 animate-pulse rounded-lg bg-[#ECEEF1]"></div>
+        </div>
+        <div class="h-20 w-full animate-pulse rounded-lg bg-[#ECEEF1]"></div>
+        <div class="flex gap-2.5">
+          <div class="h-11 w-40 animate-pulse rounded-lg bg-[#ECEEF1]"></div>
+          <div class="h-11 w-28 animate-pulse rounded-lg bg-[#ECEEF1]"></div>
+        </div>
+      </div>
+      <div class="flex-1 lg:max-w-[340px]">
+        <div class="h-40 w-full animate-pulse rounded-xl bg-[#ECEEF1]"></div>
+      </div>
+    </div>
+  </section>
+} @else if (isNotFound()) {
+  <section class="mx-auto max-w-xl p-6 text-center" data-testid="not-found-view">
+    <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F2F4F7]">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="10" cy="10" r="7"></circle>
+        <line x1="21" y1="21" x2="15" y2="15"></line>
+      </svg>
+    </div>
+    <p class="font-heading text-[17px] font-bold">Despesa não encontrada</p>
+    <p class="mx-auto mt-1.5 max-w-sm text-sm text-muted">
+      Ela pode ter sido removida, ou o link usado para chegar aqui não é mais válido.
+    </p>
+    <button
+      type="button"
+      data-testid="voltar-painel-not-found-btn"
+      class="mt-5 cursor-pointer rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-semibold text-[#344054] hover:bg-[#F2F4F7]"
+      routerLink="/"
+    >
+      Voltar ao painel
+    </button>
+  </section>
+} @else if (isLoadError()) {
+  <section class="mx-auto max-w-xl p-6">
+    <div class="flex items-start gap-3.5 rounded-xl border border-[#FECDCA] bg-[#FEF3F2] p-5" data-testid="load-error-banner" role="alert">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#D92D20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"></circle>
+        <line x1="12" y1="8" x2="12" y2="13"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <div class="flex-1">
+        <p class="text-[15px] font-bold text-[#B42318]">Não foi possível carregar esta despesa</p>
+        <p class="mt-1 text-[13px] text-[#912018]">Houve uma falha de conexão com o servidor.</p>
+        <button
+          type="button"
+          data-testid="tentar-novamente-carregar-btn"
+          class="mt-3 cursor-pointer rounded-lg border border-[#FECDCA] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#B42318] hover:bg-[#F2F4F7]"
+          (click)="onTentarNovamenteCarregar()"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    </div>
+  </section>
+} @else if (isSuccess()) {
+  <section class="mx-auto max-w-xl p-6" data-testid="success-view">
+    <div class="flex items-start gap-3.5 rounded-xl border border-[#B7E4CC] bg-[#E7F6EF] p-5" role="alert">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#0F7B4E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M8 12.5l2.5 2.5 5.5-6"></path>
+      </svg>
+      <div class="flex-1">
+        <p class="text-[15px] font-bold text-success">"{{ savedName() }}" atualizada</p>
+        <p class="mt-1 text-[13px] text-[#2E5A45]">
+          As alterações foram salvas. Ocorrências já geradas mantêm os dados de quando foram criadas.
+        </p>
+        <div class="mt-3 flex flex-wrap gap-2.5">
+          <button
+            type="button"
+            data-testid="voltar-painel-sucesso-btn"
+            class="cursor-pointer rounded-lg border border-[#B7E4CC] bg-white px-3.5 py-2 text-[13px] font-semibold text-success hover:bg-[#F2F4F7]"
+            routerLink="/"
+          >
+            Voltar ao painel
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+} @else {
+  <form class="mx-auto max-w-[900px] space-y-6 p-6" (submit)="$event.preventDefault(); onSalvar()">
+    <div>
+      <button
+        type="button"
+        data-testid="voltar-painel-btn"
+        class="mb-3 inline-flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-[13px] font-semibold text-muted"
+        (click)="onClickVoltar()"
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+        Voltar ao painel
+      </button>
+      <h1 class="font-heading text-2xl font-extrabold">Editar despesa recorrente</h1>
+      <p class="mt-1.5 text-sm text-muted">Altere os dados desta despesa. A mudança vale a partir de agora.</p>
+    </div>
+
+    <div class="flex items-start gap-2.5 rounded-lg border border-border-light bg-[#F8FAFC] px-3.5 py-3" data-testid="info-note">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"></circle><line x1="12" y1="11" x2="12" y2="16"></line><line x1="12" y1="7.5" x2="12.01" y2="7.5"></line>
+      </svg>
+      <p class="text-[12.5px] leading-relaxed text-[#475467]">
+        Ocorrências já geradas (inclusive as já pagas) não são alteradas por esta edição — nome, categoria, valor e
+        dia de vencimento passam a valer só para as próximas ocorrências.
+      </p>
+    </div>
+
+    @if (submitAttempted() && !isFormValid()) {
+      <p class="rounded-lg border border-danger bg-[#FEF3F2] px-3 py-2 text-sm text-danger" data-testid="corrigir-banner" role="alert">
+        Corrija os campos destacados antes de salvar.
+      </p>
+    }
+
+    @if (isError() && submitErrorMessage()) {
+      <div class="flex items-start gap-3.5 rounded-xl border border-[#FECDCA] bg-[#FEF3F2] p-5" data-testid="erro-banner" role="alert">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#D92D20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <line x1="12" y1="8" x2="12" y2="13"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <div class="flex-1">
+          <p class="text-[15px] font-bold text-[#B42318]">Não foi possível salvar as alterações</p>
+          <p class="mt-1 text-[13px] text-[#912018]">{{ submitErrorMessage() }}</p>
+          <button
+            type="button"
+            data-testid="tentar-novamente-btn"
+            class="mt-3 cursor-pointer rounded-lg border border-[#FECDCA] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#B42318] hover:bg-[#F2F4F7]"
+            (click)="onTentarNovamente()"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    }
+
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+      <div class="flex flex-[1.4] flex-col gap-[18px]">
+        <div>
+          <label for="nome" class="mb-1.5 block text-[13px] font-semibold">Nome</label>
+          <input
+            id="nome"
+            type="text"
+            maxlength="100"
+            data-testid="nome-input"
+            class="block w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+            [class.border-danger]="showNomeError()"
+            [class.border-border]="!showNomeError()"
+            [attr.aria-invalid]="showNomeError() || null"
+            [attr.aria-describedby]="showNomeError() ? 'nome-error' : null"
+            [value]="nome()"
+            (input)="onNomeInput($event)"
+            (blur)="onNomeBlur()"
+          />
+          @if (showNomeError()) {
+            <p id="nome-error" data-testid="nome-error" class="mt-1.5 text-xs text-danger" role="alert">{{ nomeError() }}</p>
+          }
+        </div>
+
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div>
+            <label for="categoria" class="mb-1.5 block text-[13px] font-semibold">Categoria</label>
+            <select
+              id="categoria"
+              data-testid="categoria-select"
+              class="block w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+              [value]="categoria()"
+              (change)="onCategoriaChange($event)"
+            >
+              @for (option of categoryOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label for="valor" class="mb-1.5 block text-[13px] font-semibold">Valor previsto mensal</label>
+            <div
+              class="flex items-center rounded-lg border bg-white px-3"
+              [class.border-danger]="showValorError()"
+              [class.border-border]="!showValorError()"
+            >
+              <span class="mr-1.5 text-sm text-muted">€</span>
+              <input
+                id="valor"
+                type="text"
+                inputmode="decimal"
+                data-testid="valor-input"
+                class="w-full flex-1 border-none bg-transparent py-2.5 text-sm focus:outline-none"
+                [attr.aria-invalid]="showValorError() || null"
+                [attr.aria-describedby]="showValorError() ? 'valor-error' : null"
+                [value]="valor()"
+                (input)="onValorInput($event)"
+                (blur)="onValorBlur()"
+              />
+            </div>
+            @if (showValorError()) {
+              <p id="valor-error" data-testid="valor-error" class="mt-1.5 text-xs text-danger" role="alert">{{ valorError() }}</p>
+            }
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div>
+            <label for="dia" class="mb-1.5 block text-[13px] font-semibold">Dia de vencimento</label>
+            <input
+              id="dia"
+              type="text"
+              inputmode="numeric"
+              data-testid="dia-input"
+              class="block w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+              [class.border-danger]="showDiaError()"
+              [class.border-border]="!showDiaError()"
+              [attr.aria-invalid]="showDiaError() || null"
+              [attr.aria-describedby]="showDiaError() ? 'dia-error' : null"
+              [value]="dia()"
+              (input)="onDiaInput($event)"
+              (blur)="onDiaBlur()"
+            />
+            @if (showDiaError()) {
+              <p id="dia-error" data-testid="dia-error" class="mt-1.5 text-xs text-danger" role="alert">{{ diaError() }}</p>
+            }
+          </div>
+
+          <div>
+            <label for="data-inicio" class="mb-1.5 block text-[13px] font-semibold">Data de início</label>
+            <input
+              id="data-inicio"
+              type="date"
+              data-testid="data-inicio-input"
+              class="block w-full cursor-pointer rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+              [class.border-danger]="showDataInicioError()"
+              [class.border-border]="!showDataInicioError()"
+              [attr.aria-invalid]="showDataInicioError() || null"
+              [attr.aria-describedby]="showDataInicioError() ? 'data-inicio-error' : null"
+              [value]="dataInicio()"
+              (input)="onDataInicioInput($event)"
+              (blur)="onDataInicioBlur()"
+            />
+            @if (showDataInicioError()) {
+              <p id="data-inicio-error" data-testid="data-inicio-error" class="mt-1.5 text-xs text-danger" role="alert">{{ dataInicioError() }}</p>
+            }
+          </div>
+        </div>
+
+        <div>
+          <label for="frequencia" class="mb-1.5 block text-[13px] font-semibold">Frequência</label>
+          <div class="flex items-center gap-2.5">
+            <span class="rounded-lg bg-[#EEF2FF] px-3.5 py-2 text-[13px] font-bold text-[#3446C9]">Mensal</span>
+            <span class="text-xs text-[#98A2B3]">Não editável nesta etapa</span>
+          </div>
+        </div>
+
+        <fieldset>
+          <legend class="mb-1.5 block text-[13px] font-semibold">Status</legend>
+          <div class="mt-1 inline-flex overflow-hidden rounded-lg border border-border" role="group">
+            <button
+              type="button"
+              data-testid="status-ativa-btn"
+              class="cursor-pointer px-4 py-2 text-[13px] font-semibold"
+              [class.bg-accent]="status() === 'ativa'"
+              [class.text-white]="status() === 'ativa'"
+              [class.text-muted]="status() !== 'ativa'"
+              [attr.aria-pressed]="status() === 'ativa'"
+              (click)="setStatus('ativa')"
+            >
+              Ativa
+            </button>
+            <button
+              type="button"
+              data-testid="status-pausada-btn"
+              class="cursor-pointer border-l border-border px-4 py-2 text-[13px] font-semibold"
+              [class.bg-accent]="status() === 'pausada'"
+              [class.text-white]="status() === 'pausada'"
+              [class.text-muted]="status() !== 'pausada'"
+              [attr.aria-pressed]="status() === 'pausada'"
+              (click)="setStatus('pausada')"
+            >
+              Pausada
+            </button>
+          </div>
+          <p class="mt-1.5 text-xs text-muted" data-testid="status-helper">{{ statusHelperLabel() }}</p>
+        </fieldset>
+
+        <div>
+          <label for="observacao" class="mb-1.5 block text-[13px] font-semibold">
+            Observação <span class="font-normal text-muted">(opcional)</span>
+          </label>
+          <textarea
+            id="observacao"
+            data-testid="observacao-textarea"
+            class="block min-h-[80px] w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+            [value]="observacao()"
+            (input)="onObservacaoInput($event)"
+          ></textarea>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button
+            type="submit"
+            data-testid="salvar-btn"
+            class="cursor-pointer rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-default disabled:opacity-70"
+            [disabled]="isSaving()"
+          >
+            {{ isSaving() ? 'Salvando…' : 'Salvar alterações' }}
+          </button>
+          <button
+            type="button"
+            data-testid="cancelar-btn"
+            class="cursor-pointer rounded-lg border border-border bg-transparent px-5 py-2.5 text-sm font-semibold text-muted hover:bg-[#F2F4F7]"
+            (click)="onClickVoltar()"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+
+      <div class="flex-1 lg:max-w-[340px]">
+        <app-despesa-preview
+          [nome]="nomePreview()"
+          [categoriaLabel]="categoriaLabel()"
+          [catColor]="catColor()"
+          [valorFmt]="valorFmt()"
+          [diaLabel]="diaLabel()"
+          [statusHelperLabel]="statusHelperLabel()"
+        />
+      </div>
+    </div>
+  </form>
+
+  @if (showExitConfirmDialog()) {
+    <div class="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4" data-testid="exit-confirm-overlay">
+      <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" role="alertdialog" aria-modal="true" aria-labelledby="exit-confirm-title">
+        <p id="exit-confirm-title" class="text-[15px] font-bold">Sair sem salvar?</p>
+        <p class="mt-2 text-[13px] text-muted">
+          Você alterou dados desta despesa que ainda não foram salvos. Se voltar ao painel agora, essas alterações
+          serão perdidas.
+        </p>
+        <div class="mt-5 flex flex-wrap justify-end gap-2.5">
+          <button
+            type="button"
+            data-testid="continuar-editando-btn"
+            class="cursor-pointer rounded-lg border border-border px-3.5 py-2 text-[13px] font-semibold text-[#344054]"
+            (click)="onCancelExit()"
+          >
+            Continuar editando
+          </button>
+          <button
+            type="button"
+            data-testid="sair-sem-salvar-btn"
+            class="cursor-pointer rounded-lg border-none bg-danger px-3.5 py-2 text-[13px] font-semibold text-white"
+            (click)="onConfirmExit()"
+          >
+            Sair sem salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+}
