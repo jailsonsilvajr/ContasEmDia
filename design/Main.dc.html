@@ -158,7 +158,12 @@
             <span style="padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; background: {{it.statusBg}}; color: {{it.statusColor}};">{{it.statusLabel}}</span>
           </div>
 
-          <div class="cd-col-actions">
+          <div class="cd-col-actions" style="gap: 8px;">
+            <sc-if value="{{it.isNotEditing}}" hint-placeholder-val="{{true}}">
+              <button class="cd-btn-ghost" aria-label="Editar despesa recorrente" title="Editar despesa recorrente" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; background: transparent; border: 1px solid #D0D5DD; border-radius: 8px; cursor: pointer; padding: 0;">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+              </button>
+            </sc-if>
             <sc-if value="{{it.isNotEditing}}" hint-placeholder-val="{{true}}">
               <sc-if value="{{it.notPaid}}" hint-placeholder-val="{{true}}">
                 <button class="cd-btn-outline" onClick="{{it.onIniciar}}" style="background: #FFFFFF; border: 1.5px solid {{accent}}; color: {{accent}}; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: 'Public Sans', sans-serif; white-space: nowrap;">Marcar como paga</button>
