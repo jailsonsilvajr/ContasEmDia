@@ -124,6 +124,27 @@ public sealed class RecurringExpenseRepositoryTests
     }
 
     [Fact]
+    public async Task GetByIdAsync_ExpenseWithNullNote_ReturnsNonNullNoteValueObjectWithNullValue()
+    {
+        var expense = CreateExpense(note: null);
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repository = new RecurringExpenseRepository(context);
+            await repository.AddAsync(expense);
+        }
+
+        await using var queryContext = _fixture.CreateContext();
+        var repositoryUnderTest = new RecurringExpenseRepository(queryContext);
+
+        var retrieved = await repositoryUnderTest.GetByIdAsync(expense.GetId());
+
+        Assert.NotNull(retrieved);
+        Assert.NotNull(retrieved.GetNote());
+        Assert.Null(retrieved.GetNote().GetValue());
+    }
+
+    [Fact]
     public async Task GetByIdAsync_NonExistentId_ReturnsNullWithoutThrowing()
     {
         await using var context = _fixture.CreateContext();
@@ -302,5 +323,31 @@ public sealed class RecurringExpenseRepositoryTests
 
         Assert.Equal(paidAmount.GetValue(), verifiedOccurrence.GetPaidAmount()!.GetValue());
         Assert.Equal(paymentDate.GetValue(), verifiedOccurrence.GetPaymentDate()!.GetValue());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ReactivatedAggregateAddsNewOccurrence_PersistsTheNewOccurrenceAsAnInsert()
+    {
+        var expense = CreateExpense(status: RecurringExpenseStatusType.Paused);
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repository = new RecurringExpenseRepository(context);
+            await repository.AddAsync(expense);
+        }
+
+        await using var updateContext = _fixture.CreateContext();
+        var updateRepository = new RecurringExpenseRepository(updateContext);
+        var trackedExpense = await updateRepository.GetByIdAsync(expense.GetId());
+
+        trackedExpense!.Reactivate(new ReferencePeriod(2026, 8));
+        await updateRepository.UpdateAsync(trackedExpense);
+
+        await using var verifyContext = _fixture.CreateContext();
+        var verifyRepository = new RecurringExpenseRepository(verifyContext);
+        var verified = await verifyRepository.GetByIdAsync(expense.GetId());
+
+        Assert.Equal(RecurringExpenseStatusType.Active, verified!.GetStatus().GetValue());
+        Assert.Single(verified.GetOccurrences());
     }
 }

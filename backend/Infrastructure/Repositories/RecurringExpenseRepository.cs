@@ -68,6 +68,16 @@ public sealed class RecurringExpenseRepository : IRecurringExpenseRepository
 
     public async Task UpdateAsync(RecurringExpense recurringExpense)
     {
+        foreach (var occurrence in recurringExpense.GetOccurrences())
+        {
+            var entry = _context.Entry(occurrence);
+
+            if (entry.State == EntityState.Detached)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
         await _context.SaveChangesAsync();
     }
 }
