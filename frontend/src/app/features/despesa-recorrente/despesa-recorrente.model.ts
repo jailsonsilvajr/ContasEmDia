@@ -65,3 +65,25 @@ export interface FieldError {
 export interface ApiErrorResponse {
   errors: FieldError[];
 }
+
+export interface ApiEnvelope<T> {
+  success: boolean;
+  data: T | null;
+  errors: FieldError[] | null;
+}
+
+export interface RecurringExpenseDetailResponse {
+  id: string;
+  name: string;
+  category: CategoryValue;
+  monthlyAmount: number;
+  dueDay: number;
+  startDate: string;
+  frequency: 'Monthly';
+  status: 'Active' | 'Paused';
+  note: string | null;
+}
+
+export type UpdateRecurringExpenseRequest = Omit<CreateRecurringExpenseRequest, 'frequency'>;
+
+export type UpdateRecurringExpenseResponse = RecurringExpenseDetailResponse;
