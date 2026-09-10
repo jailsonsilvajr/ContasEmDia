@@ -40,6 +40,7 @@ public sealed class MarkOccurrenceAsPaidUseCase : IMarkOccurrenceAsPaidUseCase
 
         var updatedOccurrence = new PanelOccurrenceData(
             occurrence.GetId(),
+            recurringExpense.GetId(),
             occurrence.GetName().GetValue(),
             occurrence.GetCategory().GetValue().ToString(),
             occurrence.GetExpectedAmount().GetValue(),

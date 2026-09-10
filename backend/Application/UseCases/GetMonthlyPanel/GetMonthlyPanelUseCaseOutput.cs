@@ -4,6 +4,7 @@ namespace ContasEmDia.Application.UseCases.GetMonthlyPanel;
 
 public sealed record PanelOccurrenceData(
     Guid Id,
+    Guid RecurringExpenseId,
     string Name,
     string Category,
     decimal ExpectedAmount,

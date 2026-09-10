@@ -130,4 +130,18 @@ public class GetMonthlyPanelUseCaseTests
         Assert.True(output.IsSuccess);
         Assert.Empty(output.Occurrences!);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_Occurrence_CarriesOwningRecurringExpenseId()
+    {
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
+        var expense = CreateExpense(currentReferencePeriod: new ReferencePeriod(2026, 8));
+        repository.Seed(expense);
+
+        var output = await useCase.ExecuteAsync(new GetMonthlyPanelUseCaseInput { Year = "2026", Month = "8" });
+
+        Assert.True(output.IsSuccess);
+        var occurrence = Assert.Single(output.Occurrences!);
+        Assert.Equal(expense.GetId(), occurrence.RecurringExpenseId);
+    }
 }

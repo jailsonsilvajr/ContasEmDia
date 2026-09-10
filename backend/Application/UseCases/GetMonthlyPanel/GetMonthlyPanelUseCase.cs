@@ -52,16 +52,17 @@ public sealed class GetMonthlyPanelUseCase : IGetMonthlyPanelUseCase
         var recurringExpenses = await _repositoryManager.RecurringExpenseRepository.GetByReferencePeriodAsync(referencePeriod);
 
         var occurrences = recurringExpenses
-            .SelectMany(expense => expense.GetOccurrencesForPeriod(referencePeriod))
-            .Select(occurrence => new PanelOccurrenceData(
-                occurrence.GetId(),
-                occurrence.GetName().GetValue(),
-                occurrence.GetCategory().GetValue().ToString(),
-                occurrence.GetExpectedAmount().GetValue(),
-                occurrence.GetDueDate().GetValue(),
-                occurrence.GetDerivedStatus(today).GetValue().ToString(),
-                occurrence.GetPaidAmount()?.GetValue(),
-                occurrence.GetPaymentDate()?.GetValue()))
+            .SelectMany(expense => expense.GetOccurrencesForPeriod(referencePeriod).Select(occurrence => (expense, occurrence)))
+            .Select(pair => new PanelOccurrenceData(
+                pair.occurrence.GetId(),
+                pair.expense.GetId(),
+                pair.occurrence.GetName().GetValue(),
+                pair.occurrence.GetCategory().GetValue().ToString(),
+                pair.occurrence.GetExpectedAmount().GetValue(),
+                pair.occurrence.GetDueDate().GetValue(),
+                pair.occurrence.GetDerivedStatus(today).GetValue().ToString(),
+                pair.occurrence.GetPaidAmount()?.GetValue(),
+                pair.occurrence.GetPaymentDate()?.GetValue()))
             .ToList();
 
         return GetMonthlyPanelUseCaseOutput.Success(referencePeriod.Year, referencePeriod.Month, occurrences);
