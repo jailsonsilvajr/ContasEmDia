@@ -6,14 +6,14 @@ namespace ContasEmDia.Domain.Aggregates;
 public sealed class RecurringExpense
 {
     private readonly Guid _id;
-    private readonly ExpenseName _name;
-    private readonly ExpenseCategory _category;
-    private readonly Money _monthlyAmount;
-    private readonly DueDay _dueDay;
-    private readonly CalendarDate _startDate;
+    private ExpenseName _name;
+    private ExpenseCategory _category;
+    private Money _monthlyAmount;
+    private DueDay _dueDay;
+    private CalendarDate _startDate;
     private readonly Frequency _frequency;
-    private readonly RecurringExpenseStatus _status;
-    private readonly Note _note;
+    private RecurringExpenseStatus _status;
+    private Note _note;
     private readonly List<Occurrence> _occurrences = [];
 
     public RecurringExpense(
@@ -37,15 +37,9 @@ public sealed class RecurringExpense
         _status = status;
         _note = note;
 
-        var startPeriod = ReferencePeriod.FromDate(startDate.GetValue());
-
-        if (status.GetValue() == RecurringExpenseStatusType.Active && currentReferencePeriod >= startPeriod)
+        if (status.GetValue() == RecurringExpenseStatusType.Active)
         {
-            var daysInMonth = DateTime.DaysInMonth(currentReferencePeriod.Year, currentReferencePeriod.Month);
-            var dueDayOfMonth = Math.Min(dueDay.GetValue(), daysInMonth);
-            var dueDate = new CalendarDate(new DateOnly(currentReferencePeriod.Year, currentReferencePeriod.Month, dueDayOfMonth));
-
-            _occurrences.Add(new Occurrence(currentReferencePeriod, dueDate, name, category, monthlyAmount));
+            GenerateOccurrenceForCurrentPeriodIfDue(currentReferencePeriod);
         }
     }
 
@@ -68,7 +62,7 @@ public sealed class RecurringExpense
         _startDate = startDate;
         _frequency = frequency;
         _status = status;
-        _note = note;
+        _note = note ?? new Note(null);
     }
 
     public Guid GetId() => _id;
@@ -100,6 +94,61 @@ public sealed class RecurringExpense
 
     public Occurrence? FindOccurrence(Guid occurrenceId) =>
         _occurrences.FirstOrDefault(occurrence => occurrence.GetId() == occurrenceId);
+
+    public void Rename(ExpenseName newName)
+    {
+        _name = newName;
+    }
+
+    public void ChangeCategory(ExpenseCategory newCategory)
+    {
+        _category = newCategory;
+    }
+
+    public void ChangeMonthlyAmount(Money newMonthlyAmount)
+    {
+        _monthlyAmount = newMonthlyAmount;
+    }
+
+    public void ChangeDueDay(DueDay newDueDay)
+    {
+        _dueDay = newDueDay;
+    }
+
+    public void ChangeStartDate(CalendarDate newStartDate)
+    {
+        _startDate = newStartDate;
+    }
+
+    public void ChangeNote(Note newNote)
+    {
+        _note = newNote;
+    }
+
+    public void Pause()
+    {
+        _status = new RecurringExpenseStatus(RecurringExpenseStatusType.Paused);
+    }
+
+    public void Reactivate(ReferencePeriod currentReferencePeriod)
+    {
+        _status = new RecurringExpenseStatus(RecurringExpenseStatusType.Active);
+        GenerateOccurrenceForCurrentPeriodIfDue(currentReferencePeriod);
+    }
+
+    private void GenerateOccurrenceForCurrentPeriodIfDue(ReferencePeriod currentReferencePeriod)
+    {
+        var startPeriod = ReferencePeriod.FromDate(_startDate.GetValue());
+
+        if (currentReferencePeriod >= startPeriod && GetOccurrencesForPeriod(currentReferencePeriod).Count == 0)
+        {
+            var daysInMonth = DateTime.DaysInMonth(currentReferencePeriod.Year, currentReferencePeriod.Month);
+            var dueDayOfMonth = Math.Min(_dueDay.GetValue(), daysInMonth);
+            var dueDate = new CalendarDate(new DateOnly(currentReferencePeriod.Year, currentReferencePeriod.Month, dueDayOfMonth));
+
+            _occurrences.Add(new Occurrence(currentReferencePeriod, dueDate, _name, _category, _monthlyAmount));
+        }
+    }
 
     public void MarkOccurrenceAsPaid(Guid occurrenceId, Money paidAmount, CalendarDate paymentDate)
     {

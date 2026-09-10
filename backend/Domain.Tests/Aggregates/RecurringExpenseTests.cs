@@ -192,4 +192,139 @@ public class RecurringExpenseTests
 
         Assert.Equal("Ocorrência não encontrada.", exception.Message);
     }
+
+    [Fact]
+    public void Rename_ReplacesNameOnly_DoesNotAffectExistingOccurrences()
+    {
+        var expense = CreateExpense(name: "Aluguel", currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrence = expense.GetOccurrences().Single();
+
+        expense.Rename(new ExpenseName("Aluguel do apartamento"));
+
+        Assert.Equal("Aluguel do apartamento", expense.GetName().GetValue());
+        Assert.Single(expense.GetOccurrences());
+        Assert.Equal("Aluguel", occurrence.GetName().GetValue());
+    }
+
+    [Fact]
+    public void ChangeCategory_ReplacesCategoryOnly_DoesNotAffectExistingOccurrences()
+    {
+        var expense = CreateExpense(category: ExpenseCategoryType.Housing, currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrence = expense.GetOccurrences().Single();
+
+        expense.ChangeCategory(new ExpenseCategory(ExpenseCategoryType.Services));
+
+        Assert.Equal(ExpenseCategoryType.Services, expense.GetCategory().GetValue());
+        Assert.Single(expense.GetOccurrences());
+        Assert.Equal(ExpenseCategoryType.Housing, occurrence.GetCategory().GetValue());
+    }
+
+    [Fact]
+    public void ChangeMonthlyAmount_ReplacesMonthlyAmountOnly_DoesNotAffectExistingOccurrences()
+    {
+        var expense = CreateExpense(monthlyAmount: 1500m, currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrence = expense.GetOccurrences().Single();
+
+        expense.ChangeMonthlyAmount(new Money(1900m));
+
+        Assert.Equal(1900m, expense.GetMonthlyAmount().GetValue());
+        Assert.Single(expense.GetOccurrences());
+        Assert.Equal(1500m, occurrence.GetExpectedAmount().GetValue());
+    }
+
+    [Fact]
+    public void ChangeDueDay_ReplacesDueDayOnly_DoesNotAffectExistingOccurrences()
+    {
+        var expense = CreateExpense(dueDay: 10, currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrence = expense.GetOccurrences().Single();
+        var originalDueDate = occurrence.GetDueDate().GetValue();
+
+        expense.ChangeDueDay(new DueDay(20));
+
+        Assert.Equal(20, expense.GetDueDay().GetValue());
+        Assert.Single(expense.GetOccurrences());
+        Assert.Equal(originalDueDate, occurrence.GetDueDate().GetValue());
+    }
+
+    [Fact]
+    public void ChangeStartDate_ReplacesStartDateOnly_DoesNotAffectExistingOccurrences()
+    {
+        var expense = CreateExpense(startDate: new DateOnly(2026, 8, 1), currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrenceCountBefore = expense.GetOccurrences().Count;
+
+        expense.ChangeStartDate(new CalendarDate(new DateOnly(2026, 7, 1)));
+
+        Assert.Equal(new DateOnly(2026, 7, 1), expense.GetStartDate().GetValue());
+        Assert.Equal(occurrenceCountBefore, expense.GetOccurrences().Count);
+    }
+
+    [Fact]
+    public void ChangeNote_ReplacesNoteOnly_DoesNotAffectExistingOccurrences()
+    {
+        var expense = CreateExpense(note: "Nota original", currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrenceCountBefore = expense.GetOccurrences().Count;
+
+        expense.ChangeNote(new Note("Nota atualizada"));
+
+        Assert.Equal("Nota atualizada", expense.GetNote().GetValue());
+        Assert.Equal(occurrenceCountBefore, expense.GetOccurrences().Count);
+    }
+
+    [Fact]
+    public void Pause_SetsStatusToPaused_DoesNotAffectExistingOccurrences()
+    {
+        var expense = CreateExpense(status: RecurringExpenseStatusType.Active, currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrenceCountBefore = expense.GetOccurrences().Count;
+
+        expense.Pause();
+
+        Assert.Equal(RecurringExpenseStatusType.Paused, expense.GetStatus().GetValue());
+        Assert.Equal(occurrenceCountBefore, expense.GetOccurrences().Count);
+    }
+
+    [Fact]
+    public void Reactivate_StartDateBegunAndNoOccurrenceForCurrentPeriod_SetsActiveAndGeneratesPendingOccurrence()
+    {
+        var expense = CreateExpense(
+            status: RecurringExpenseStatusType.Paused,
+            monthlyAmount: 1500m,
+            startDate: new DateOnly(2026, 1, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        expense.Reactivate(new ReferencePeriod(2026, 8));
+
+        Assert.Equal(RecurringExpenseStatusType.Active, expense.GetStatus().GetValue());
+        var occurrence = Assert.Single(expense.GetOccurrences());
+        Assert.Equal(OccurrenceStatusType.Pending, occurrence.GetStatus().GetValue());
+        Assert.Equal(1500m, occurrence.GetExpectedAmount().GetValue());
+    }
+
+    [Fact]
+    public void Reactivate_OccurrenceAlreadyExistsForCurrentPeriod_SetsActiveAndGeneratesNoAdditionalOccurrence()
+    {
+        var expense = CreateExpense(
+            status: RecurringExpenseStatusType.Active,
+            startDate: new DateOnly(2026, 1, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+        expense.Pause();
+
+        expense.Reactivate(new ReferencePeriod(2026, 8));
+
+        Assert.Equal(RecurringExpenseStatusType.Active, expense.GetStatus().GetValue());
+        Assert.Single(expense.GetOccurrences());
+    }
+
+    [Fact]
+    public void Reactivate_StartDateInFuture_SetsActiveButGeneratesNoOccurrence()
+    {
+        var expense = CreateExpense(
+            status: RecurringExpenseStatusType.Paused,
+            startDate: new DateOnly(2026, 9, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        expense.Reactivate(new ReferencePeriod(2026, 8));
+
+        Assert.Equal(RecurringExpenseStatusType.Active, expense.GetStatus().GetValue());
+        Assert.Empty(expense.GetOccurrences());
+    }
 }
