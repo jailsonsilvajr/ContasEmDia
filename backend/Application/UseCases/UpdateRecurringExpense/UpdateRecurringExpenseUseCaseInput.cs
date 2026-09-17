@@ -14,6 +14,8 @@ public sealed class UpdateRecurringExpenseUseCaseInput
 
     public required string StartDate { get; init; }
 
+    public required string EndDate { get; init; }
+
     public required string Status { get; init; }
 
     public string? Note { get; init; }

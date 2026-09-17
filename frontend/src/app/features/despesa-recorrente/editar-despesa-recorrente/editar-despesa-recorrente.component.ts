@@ -13,6 +13,7 @@ import {
   getValorError,
   getDiaError,
   getDataInicioError,
+  getDataFimError,
 } from '../../../shared/recurring-expense-form.util';
 import {
   CATEGORY_COLORS,
@@ -24,13 +25,14 @@ import {
   type UpdateRecurringExpenseRequest,
 } from '../despesa-recorrente.model';
 
-type ApiField = 'name' | 'category' | 'monthlyAmount' | 'dueDay' | 'startDate';
+type ApiField = 'name' | 'category' | 'monthlyAmount' | 'dueDay' | 'startDate' | 'endDate';
 const KNOWN_API_FIELDS: ReadonlySet<string> = new Set<ApiField>([
   'name',
   'category',
   'monthlyAmount',
   'dueDay',
   'startDate',
+  'endDate',
 ]);
 
 type LoadStatus = 'loading' | 'loaded' | 'not-found' | 'error';
@@ -42,6 +44,7 @@ interface EditableFields {
   valor: string;
   dia: string;
   dataInicio: string;
+  dataFim: string;
   status: StatusValue;
   observacao: string;
 }
@@ -65,6 +68,7 @@ function toFields(detail: RecurringExpenseDetailResponse): EditableFields {
     valor: toValorMasked(detail.monthlyAmount),
     dia: String(detail.dueDay),
     dataInicio: detail.startDate,
+    dataFim: detail.endDate,
     status: detail.status === 'Active' ? 'ativa' : 'pausada',
     observacao: detail.note ?? '',
   };
@@ -89,6 +93,7 @@ export class EditarDespesaRecorrenteComponent {
   readonly valor = signal('');
   readonly dia = signal('');
   readonly dataInicio = signal('');
+  readonly dataFim = signal('');
   readonly status = signal<StatusValue>('ativa');
   readonly observacao = signal('');
 
@@ -99,7 +104,7 @@ export class EditarDespesaRecorrenteComponent {
   readonly submitErrorMessage = signal<string | null>(null);
   readonly savedName = signal<string | null>(null);
 
-  readonly touched = signal({ nome: false, valor: false, dia: false, dataInicio: false });
+  readonly touched = signal({ nome: false, valor: false, dia: false, dataInicio: false, dataFim: false });
   readonly submitAttempted = signal(false);
   readonly apiFieldErrors = signal<Partial<Record<ApiField, string>>>({});
 
@@ -136,8 +141,14 @@ export class EditarDespesaRecorrenteComponent {
   readonly valorError = computed(() => getValorError(this.valor()));
   readonly diaError = computed(() => getDiaError(this.dia()));
   readonly dataInicioError = computed(() => getDataInicioError(this.dataInicio()));
+  readonly dataFimError = computed(() => getDataFimError(this.dataInicio(), this.dataFim()));
   readonly isFormValid = computed(
-    () => !this.nomeError() && !this.valorError() && !this.diaError() && !this.dataInicioError(),
+    () =>
+      !this.nomeError() &&
+      !this.valorError() &&
+      !this.diaError() &&
+      !this.dataInicioError() &&
+      !this.dataFimError(),
   );
 
   readonly hasUnsavedData = computed(() => {
@@ -149,6 +160,7 @@ export class EditarDespesaRecorrenteComponent {
       this.valor() !== initial.valor ||
       this.dia() !== initial.dia ||
       this.dataInicio() !== initial.dataInicio ||
+      this.dataFim() !== initial.dataFim ||
       this.status() !== initial.status ||
       this.observacao() !== initial.observacao
     );
@@ -167,6 +179,9 @@ export class EditarDespesaRecorrenteComponent {
   );
   readonly showDataInicioError = computed(
     () => (this.touched().dataInicio || this.submitAttempted()) && this.dataInicioError() !== null,
+  );
+  readonly showDataFimError = computed(
+    () => (this.touched().dataFim || this.submitAttempted()) && this.dataFimError() !== null,
   );
 
   constructor() {
@@ -189,6 +204,7 @@ export class EditarDespesaRecorrenteComponent {
         this.valor.set(fields.valor);
         this.dia.set(fields.dia);
         this.dataInicio.set(fields.dataInicio);
+        this.dataFim.set(fields.dataFim);
         this.status.set(fields.status);
         this.observacao.set(fields.observacao);
         this.initialSnapshot.set(fields);
@@ -228,6 +244,10 @@ export class EditarDespesaRecorrenteComponent {
     this.touched.update((t) => ({ ...t, dataInicio: true }));
   }
 
+  protected onDataFimBlur(): void {
+    this.touched.update((t) => ({ ...t, dataFim: true }));
+  }
+
   protected onCategoriaChange(event: Event): void {
     this.categoria.set((event.target as HTMLSelectElement).value as CategoryValue);
   }
@@ -242,6 +262,10 @@ export class EditarDespesaRecorrenteComponent {
 
   protected onDataInicioInput(event: Event): void {
     this.dataInicio.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onDataFimInput(event: Event): void {
+    this.dataFim.set((event.target as HTMLInputElement).value);
   }
 
   protected onObservacaoInput(event: Event): void {
@@ -283,6 +307,7 @@ export class EditarDespesaRecorrenteComponent {
       monthlyAmount: parseValor(this.valor()) ?? 0,
       dueDay: parseDia(this.dia()) ?? 0,
       startDate: this.dataInicio(),
+      endDate: this.dataFim(),
       status: this.status() === 'ativa' ? 'Active' : 'Paused',
       note: this.observacao().trim() ? this.observacao().trim() : null,
     };

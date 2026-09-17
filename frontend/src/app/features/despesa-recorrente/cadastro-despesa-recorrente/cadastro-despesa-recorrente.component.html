@@ -184,6 +184,28 @@
           </div>
         </div>
 
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div>
+            <label for="data-fim" class="mb-1.5 block text-[13px] font-semibold">Data de fim</label>
+            <input
+              id="data-fim"
+              type="date"
+              data-testid="data-fim-input"
+              class="block w-full cursor-pointer rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15"
+              [class.border-danger]="showDataFimError()"
+              [class.border-border]="!showDataFimError()"
+              [attr.aria-invalid]="showDataFimError() || null"
+              [attr.aria-describedby]="showDataFimError() ? 'data-fim-error' : null"
+              [value]="dataFim()"
+              (input)="onDataFimInput($event)"
+              (blur)="onDataFimBlur()"
+            />
+            @if (showDataFimError()) {
+              <p id="data-fim-error" data-testid="data-fim-error" class="mt-1.5 text-xs text-danger" role="alert">{{ dataFimError() }}</p>
+            }
+          </div>
+        </div>
+
         <div>
           <label for="frequencia" class="mb-1.5 block text-[13px] font-semibold">Frequência</label>
           <input

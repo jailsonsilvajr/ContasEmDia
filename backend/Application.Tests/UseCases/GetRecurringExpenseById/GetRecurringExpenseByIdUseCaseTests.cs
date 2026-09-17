@@ -13,6 +13,7 @@ public class GetRecurringExpenseByIdUseCaseTests
             new Money(1500m),
             new DueDay(10),
             new CalendarDate(new DateOnly(2026, 8, 1)),
+            new CalendarDate(new DateOnly(2026, 8, 31)),
             new Frequency(FrequencyType.Monthly),
             new RecurringExpenseStatus(RecurringExpenseStatusType.Active),
             new Note("Nota"),
@@ -42,6 +43,7 @@ public class GetRecurringExpenseByIdUseCaseTests
         Assert.Equal(expense.GetMonthlyAmount().GetValue(), output.RecurringExpense.MonthlyAmount);
         Assert.Equal(expense.GetDueDay().GetValue(), output.RecurringExpense.DueDay);
         Assert.Equal(expense.GetStartDate().GetValue(), output.RecurringExpense.StartDate);
+        Assert.Equal(expense.GetEndDate().GetValue(), output.RecurringExpense.EndDate);
         Assert.Equal(expense.GetFrequency().GetValue().ToString(), output.RecurringExpense.Frequency);
         Assert.Equal(expense.GetStatus().GetValue().ToString(), output.RecurringExpense.Status);
         Assert.Equal(expense.GetNote().GetValue(), output.RecurringExpense.Note);

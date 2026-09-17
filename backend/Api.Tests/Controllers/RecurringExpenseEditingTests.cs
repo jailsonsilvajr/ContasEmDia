@@ -36,22 +36,48 @@ public sealed class RecurringExpenseEditingTests
         decimal monthlyAmount = 1500m,
         int dueDay = 10,
         DateOnly? startDate = null,
+        DateOnly? endDate = null,
         RecurringExpenseStatusType status = RecurringExpenseStatusType.Active,
         string? note = null,
-        ReferencePeriod? currentReferencePeriod = null) =>
-        new(
+        ReferencePeriod? currentReferencePeriod = null)
+    {
+        var resolvedStartDate = startDate ?? new DateOnly(2026, 8, 1);
+        var resolvedCurrentReferencePeriod = currentReferencePeriod ?? new ReferencePeriod(2026, 8);
+        var startPeriod = ReferencePeriod.FromDate(resolvedStartDate);
+        var defaultEndPeriod = startPeriod > resolvedCurrentReferencePeriod ? startPeriod : resolvedCurrentReferencePeriod;
+        var defaultEndDate = new DateOnly(
+            defaultEndPeriod.Year,
+            defaultEndPeriod.Month,
+            DateTime.DaysInMonth(defaultEndPeriod.Year, defaultEndPeriod.Month));
+
+        return new(
             new ExpenseName(name),
             new ExpenseCategory(category),
             new Money(monthlyAmount),
             new DueDay(dueDay),
-            new CalendarDate(startDate ?? new DateOnly(2026, 8, 1)),
+            new CalendarDate(resolvedStartDate),
+            new CalendarDate(endDate ?? defaultEndDate),
             new Frequency(FrequencyType.Monthly),
             new RecurringExpenseStatus(status),
             new Note(note),
-            currentReferencePeriod ?? new ReferencePeriod(2026, 8));
+            resolvedCurrentReferencePeriod);
+    }
+
+    private static DateOnly FirstDayOfMonthOffset(int monthsFromNow)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        return new DateOnly(today.Year, today.Month, 1).AddMonths(monthsFromNow);
+    }
+
+    private static DateOnly LastDayOfMonthOffset(int monthsFromNow)
+    {
+        var target = FirstDayOfMonthOffset(monthsFromNow);
+        return new DateOnly(target.Year, target.Month, DateTime.DaysInMonth(target.Year, target.Month));
+    }
 
     private static object ValidUpdateBody(
         string startDate,
+        string endDate = "2026-08-31",
         string status = "Active",
         string name = "Aluguel",
         string category = "Housing",
@@ -64,6 +90,7 @@ public sealed class RecurringExpenseEditingTests
         monthlyAmount,
         dueDay,
         startDate,
+        endDate,
         status,
         note
     };
@@ -145,15 +172,20 @@ public sealed class RecurringExpenseEditingTests
     [Fact]
     public async Task Put_StatusPausedToActiveStartDateBegunNoOccurrenceYet_GeneratesExactlyOnePendingOccurrence()
     {
+        // currentReferencePeriod (2020-01) is well before startDate's own competência (2026-01), so
+        // construction generates zero occurrences (EC06) regardless of the real "today" the running
+        // API uses for Reactivate — startDate (2026-01) stays safely in the past relative to it.
         var expense = CreateExpense(
             status: RecurringExpenseStatusType.Paused,
             startDate: new DateOnly(2026, 1, 1),
-            currentReferencePeriod: new ReferencePeriod(2026, 8));
+            endDate: new DateOnly(2026, 1, 31),
+            currentReferencePeriod: new ReferencePeriod(2020, 1));
+        Assert.Empty(expense.GetOccurrences());
         var client = CreateClient(expense);
 
         var response = await client.PutAsJsonAsync(
             $"{Endpoint}/{expense.GetId()}",
-            ValidUpdateBody("2026-01-01", status: "Active"));
+            ValidUpdateBody("2026-01-01", endDate: "2026-01-31", status: "Active"));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -162,7 +194,7 @@ public sealed class RecurringExpenseEditingTests
 
         var secondResponse = await client.PutAsJsonAsync(
             $"{Endpoint}/{expense.GetId()}",
-            ValidUpdateBody("2026-01-01", status: "Active"));
+            ValidUpdateBody("2026-01-01", endDate: "2026-01-31", status: "Active"));
 
         Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
         Assert.Single(expense.GetOccurrences());
@@ -270,6 +302,181 @@ public sealed class RecurringExpenseEditingTests
 
         Assert.False(root.GetProperty("success").GetBoolean());
         Assert.Equal(JsonValueKind.Null, root.GetProperty("data").ValueKind);
+    }
+
+    [Fact]
+    public async Task Put_ExtendingEndDateToLaterCompetencia_Returns200WithUpdatedEndDateAndAddsNewOccurrences()
+    {
+        var startDate = FirstDayOfMonthOffset(-6);
+        var expense = CreateExpense(
+            startDate: startDate,
+            endDate: LastDayOfMonthOffset(3),
+            currentReferencePeriod: ReferencePeriod.FromDate(startDate)); // 10 occurrences: M-6..M+3
+        var client = CreateClient(expense);
+
+        var newEndDate = LastDayOfMonthOffset(5); // stays within the 1-year cap (startDate + 1yr == first day of M+6)
+        var response = await client.PutAsJsonAsync(
+            $"{Endpoint}/{expense.GetId()}",
+            ValidUpdateBody(startDate.ToString("yyyy-MM-dd"), endDate: newEndDate.ToString("yyyy-MM-dd")));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var data = body!.RootElement.GetProperty("data");
+        Assert.Equal(newEndDate.ToString("yyyy-MM-dd"), data.GetProperty("endDate").GetString());
+
+        Assert.Equal(12, expense.GetOccurrences().Count); // M-6..M+5
+    }
+
+    [Fact]
+    public async Task Put_ExtendingEndDatePastCompetenciaAlreadyInThePast_Returns200AndFillsRetroactiveGapIncludingPastCompetencias()
+    {
+        var startDate = FirstDayOfMonthOffset(-6);
+        var oldEndDate = LastDayOfMonthOffset(-4);
+        var expense = CreateExpense(
+            startDate: startDate,
+            endDate: oldEndDate,
+            currentReferencePeriod: ReferencePeriod.FromDate(startDate)); // 3 occurrences: M-6, M-5, M-4
+        Assert.Equal(3, expense.GetOccurrences().Count);
+        var client = CreateClient(expense);
+
+        var newEndDate = LastDayOfMonthOffset(2);
+        var response = await client.PutAsJsonAsync(
+            $"{Endpoint}/{expense.GetId()}",
+            ValidUpdateBody(startDate.ToString("yyyy-MM-dd"), endDate: newEndDate.ToString("yyyy-MM-dd")));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // Gap-filled: M-3, M-2, M-1 (already in the past relative to "now"), M0, M+1, M+2.
+        Assert.Equal(9, expense.GetOccurrences().Count);
+    }
+
+    [Fact]
+    public async Task Put_EndDateBeyondOneYearTetoFromCurrentStartDate_Returns400AndPersistsNothing()
+    {
+        var startDate = FirstDayOfMonthOffset(0);
+        var originalEndDate = LastDayOfMonthOffset(0);
+        var expense = CreateExpense(
+            startDate: startDate,
+            endDate: originalEndDate,
+            currentReferencePeriod: ReferencePeriod.FromDate(startDate));
+        var client = CreateClient(expense);
+
+        var beyondTeto = startDate.AddYears(1).AddDays(1);
+        var response = await client.PutAsJsonAsync(
+            $"{Endpoint}/{expense.GetId()}",
+            ValidUpdateBody(startDate.ToString("yyyy-MM-dd"), endDate: beyondTeto.ToString("yyyy-MM-dd")));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var errors = body!.RootElement.GetProperty("errors");
+        Assert.Equal(1, errors.GetArrayLength());
+        Assert.Equal("endDate", errors[0].GetProperty("field").GetString());
+
+        Assert.Equal(originalEndDate, expense.GetEndDate().GetValue());
+        Assert.Single(expense.GetOccurrences());
+    }
+
+    [Fact]
+    public async Task Put_NewStartDateNoLongerBeforeCurrentEndDate_Returns400AndPersistsNothing()
+    {
+        var startDate = FirstDayOfMonthOffset(0);
+        var originalEndDate = LastDayOfMonthOffset(0);
+        var expense = CreateExpense(
+            startDate: startDate,
+            endDate: originalEndDate,
+            currentReferencePeriod: ReferencePeriod.FromDate(startDate));
+        var client = CreateClient(expense);
+
+        var newStartDate = FirstDayOfMonthOffset(1);
+        var response = await client.PutAsJsonAsync(
+            $"{Endpoint}/{expense.GetId()}",
+            ValidUpdateBody(newStartDate.ToString("yyyy-MM-dd"), endDate: originalEndDate.ToString("yyyy-MM-dd")));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var errors = body!.RootElement.GetProperty("errors");
+        Assert.Equal(1, errors.GetArrayLength());
+        Assert.Equal("startDate", errors[0].GetProperty("field").GetString());
+
+        Assert.Equal(startDate, expense.GetStartDate().GetValue());
+        Assert.Single(expense.GetOccurrences());
+    }
+
+    [Fact]
+    public async Task Put_ReducingEndDateWithNoPaidOccurrenceInRemovedRange_Returns200AndExcludesTrailingOccurrences()
+    {
+        var startDate = FirstDayOfMonthOffset(-6);
+        var expense = CreateExpense(
+            startDate: startDate,
+            endDate: LastDayOfMonthOffset(3),
+            currentReferencePeriod: ReferencePeriod.FromDate(startDate)); // 10 occurrences: M-6..M+3
+        var client = CreateClient(expense);
+
+        var reducedEndDate = LastDayOfMonthOffset(1);
+        var response = await client.PutAsJsonAsync(
+            $"{Endpoint}/{expense.GetId()}",
+            ValidUpdateBody(startDate.ToString("yyyy-MM-dd"), endDate: reducedEndDate.ToString("yyyy-MM-dd")));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(8, expense.GetOccurrences().Count); // M+2, M+3 excluded
+    }
+
+    [Fact]
+    public async Task Put_ReducingEndDateExcludingAPaidOccurrence_Returns400WithBlockMessageAndPersistsNothing()
+    {
+        var startDate = FirstDayOfMonthOffset(-6);
+        var expense = CreateExpense(
+            startDate: startDate,
+            endDate: LastDayOfMonthOffset(3),
+            currentReferencePeriod: ReferencePeriod.FromDate(startDate)); // 10 occurrences: M-6..M+3
+        var occurrenceInRemovedRange = expense.GetOccurrencesForPeriod(new ReferencePeriod(
+            FirstDayOfMonthOffset(2).Year, FirstDayOfMonthOffset(2).Month)).Single();
+        expense.MarkOccurrenceAsPaid(occurrenceInRemovedRange.GetId(), new Money(1500m), new CalendarDate(FirstDayOfMonthOffset(2)));
+        var client = CreateClient(expense);
+
+        var reducedEndDate = LastDayOfMonthOffset(1);
+        var response = await client.PutAsJsonAsync(
+            $"{Endpoint}/{expense.GetId()}",
+            ValidUpdateBody(startDate.ToString("yyyy-MM-dd"), endDate: reducedEndDate.ToString("yyyy-MM-dd")));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var errors = body!.RootElement.GetProperty("errors");
+        Assert.Equal(1, errors.GetArrayLength());
+        Assert.Equal("endDate", errors[0].GetProperty("field").GetString());
+
+        Assert.Equal(LastDayOfMonthOffset(3), expense.GetEndDate().GetValue());
+        Assert.Equal(10, expense.GetOccurrences().Count);
+    }
+
+    [Fact]
+    public async Task Put_ReducingEndDateToCompetenciaBeforeCurrentMonth_Returns400WithPastMessageEvenWithNoPaidOccurrence()
+    {
+        var startDate = FirstDayOfMonthOffset(-6);
+        var expense = CreateExpense(
+            startDate: startDate,
+            endDate: LastDayOfMonthOffset(3),
+            currentReferencePeriod: ReferencePeriod.FromDate(startDate)); // 10 occurrences: M-6..M+3
+        var client = CreateClient(expense);
+
+        var pastEndDate = LastDayOfMonthOffset(-1);
+        var response = await client.PutAsJsonAsync(
+            $"{Endpoint}/{expense.GetId()}",
+            ValidUpdateBody(startDate.ToString("yyyy-MM-dd"), endDate: pastEndDate.ToString("yyyy-MM-dd")));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var errors = body!.RootElement.GetProperty("errors");
+        Assert.Equal(1, errors.GetArrayLength());
+        Assert.Equal("endDate", errors[0].GetProperty("field").GetString());
+        Assert.Equal("A data de fim não pode estar no passado.", errors[0].GetProperty("message").GetString());
+
+        Assert.Equal(LastDayOfMonthOffset(3), expense.GetEndDate().GetValue());
+        Assert.Equal(10, expense.GetOccurrences().Count);
     }
 }
 

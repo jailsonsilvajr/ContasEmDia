@@ -22,20 +22,31 @@ public sealed class RecurringExpenseRepositoryTests
         decimal monthlyAmount = 1500m,
         int dueDay = 10,
         DateOnly? startDate = null,
+        DateOnly? endDate = null,
         RecurringExpenseStatusType status = RecurringExpenseStatusType.Active,
         string? note = null,
         ReferencePeriod? currentReferencePeriod = null)
     {
+        var resolvedStartDate = startDate ?? new DateOnly(2026, 8, 1);
+        var resolvedCurrentReferencePeriod = currentReferencePeriod ?? new ReferencePeriod(2026, 8);
+        var startPeriod = ReferencePeriod.FromDate(resolvedStartDate);
+        var defaultEndPeriod = startPeriod > resolvedCurrentReferencePeriod ? startPeriod : resolvedCurrentReferencePeriod;
+        var defaultEndDate = new DateOnly(
+            defaultEndPeriod.Year,
+            defaultEndPeriod.Month,
+            DateTime.DaysInMonth(defaultEndPeriod.Year, defaultEndPeriod.Month));
+
         return new RecurringExpense(
             new ExpenseName(name),
             new ExpenseCategory(category),
             new Money(monthlyAmount),
             new DueDay(dueDay),
-            new CalendarDate(startDate ?? new DateOnly(2026, 8, 1)),
+            new CalendarDate(resolvedStartDate),
+            new CalendarDate(endDate ?? defaultEndDate),
             new Frequency(FrequencyType.Monthly),
             new RecurringExpenseStatus(status),
             new Note(note),
-            currentReferencePeriod ?? new ReferencePeriod(2026, 8));
+            resolvedCurrentReferencePeriod);
     }
 
     [Fact]
@@ -58,7 +69,32 @@ public sealed class RecurringExpenseRepositoryTests
     }
 
     [Fact]
-    public async Task AddAsync_PausedExpense_PersistsOnlyExpenseWithoutOccurrence()
+    public async Task AddAsync_PausedExpenseWithFutureStartDate_PersistsOnlyExpenseWithoutOccurrence()
+    {
+        // Decision 1 (refinamento data-fim-despesa-recorrente): a Paused despesa now generates its
+        // vigência's occurrences at cadastro too, just like Active — only a future startDate yields none.
+        var expense = CreateExpense(
+            status: RecurringExpenseStatusType.Paused,
+            startDate: new DateOnly(2026, 9, 1),
+            endDate: new DateOnly(2026, 9, 30),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        await using var context = _fixture.CreateContext();
+        var repository = new RecurringExpenseRepository(context);
+
+        await repository.AddAsync(expense);
+
+        await using var verifyContext = _fixture.CreateContext();
+        var savedExpense = await verifyContext.RecurringExpenses
+            .Include("_occurrences")
+            .FirstOrDefaultAsync(e => EF.Property<Guid>(e, "_id") == expense.GetId());
+
+        Assert.NotNull(savedExpense);
+        Assert.Empty(savedExpense.GetOccurrences());
+    }
+
+    [Fact]
+    public async Task AddAsync_PausedExpenseStartingInCurrentCompetencia_PersistsExpenseAndOccurrenceInSingleWrite()
     {
         var expense = CreateExpense(status: RecurringExpenseStatusType.Paused);
 
@@ -73,7 +109,7 @@ public sealed class RecurringExpenseRepositoryTests
             .FirstOrDefaultAsync(e => EF.Property<Guid>(e, "_id") == expense.GetId());
 
         Assert.NotNull(savedExpense);
-        Assert.Empty(savedExpense.GetOccurrences());
+        Assert.Single(savedExpense.GetOccurrences());
     }
 
     [Fact]
@@ -208,19 +244,12 @@ public sealed class RecurringExpenseRepositoryTests
             startDate: new DateOnly(2026, 8, 1),
             currentReferencePeriod: new ReferencePeriod(2026, 8));
 
-        // An expense only generates an occurrence while Active at construction
-        // time; RF20 requires an expense later paused to keep showing occurrences
-        // it already generated. There is no public mutation for status yet, so
-        // we simulate "was active, generated an occurrence, then got paused" via
-        // reflection on the private field, matching the pattern already used for
-        // OccurrenceTests's Paid-state setup.
+        // Decision 1 (refinamento data-fim-despesa-recorrente): generation at cadastro no longer
+        // checks status, so a Paused despesa generates its vigência's occurrences directly too.
         var pausedExpense = CreateExpense(
-            status: RecurringExpenseStatusType.Active,
+            status: RecurringExpenseStatusType.Paused,
             startDate: new DateOnly(2026, 8, 1),
             currentReferencePeriod: new ReferencePeriod(2026, 8));
-        typeof(RecurringExpense)
-            .GetField("_status", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
-            .SetValue(pausedExpense, new RecurringExpenseStatus(RecurringExpenseStatusType.Paused));
 
         await using (var context = _fixture.CreateContext())
         {
@@ -328,7 +357,13 @@ public sealed class RecurringExpenseRepositoryTests
     [Fact]
     public async Task UpdateAsync_ReactivatedAggregateAddsNewOccurrence_PersistsTheNewOccurrenceAsAnInsert()
     {
-        var expense = CreateExpense(status: RecurringExpenseStatusType.Paused);
+        // startDate is still in the future at construction time, so no occurrence is generated yet —
+        // "now" advances to September by the time Reactivate runs, producing a genuinely new insert.
+        var expense = CreateExpense(
+            status: RecurringExpenseStatusType.Paused,
+            startDate: new DateOnly(2026, 9, 1),
+            endDate: new DateOnly(2026, 9, 30),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
 
         await using (var context = _fixture.CreateContext())
         {
@@ -340,7 +375,7 @@ public sealed class RecurringExpenseRepositoryTests
         var updateRepository = new RecurringExpenseRepository(updateContext);
         var trackedExpense = await updateRepository.GetByIdAsync(expense.GetId());
 
-        trackedExpense!.Reactivate(new ReferencePeriod(2026, 8));
+        trackedExpense!.Reactivate(new ReferencePeriod(2026, 9));
         await updateRepository.UpdateAsync(trackedExpense);
 
         await using var verifyContext = _fixture.CreateContext();
@@ -349,5 +384,71 @@ public sealed class RecurringExpenseRepositoryTests
 
         Assert.Equal(RecurringExpenseStatusType.Active, verified!.GetStatus().GetValue());
         Assert.Single(verified.GetOccurrences());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ExtendedEndDateWithPreExistingOccurrences_PersistsNewOccurrencesAlongsideExisting()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 9, 1),
+            endDate: new DateOnly(2026, 12, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 9));
+        Assert.Equal(4, expense.GetOccurrences().Count); // Sep..Dec
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repository = new RecurringExpenseRepository(context);
+            await repository.AddAsync(expense);
+        }
+
+        await using var updateContext = _fixture.CreateContext();
+        var updateRepository = new RecurringExpenseRepository(updateContext);
+        var trackedExpense = await updateRepository.GetByIdAsync(expense.GetId());
+
+        trackedExpense!.ChangeEndDate(new CalendarDate(new DateOnly(2027, 3, 1)), new ReferencePeriod(2026, 9));
+        await updateRepository.UpdateAsync(trackedExpense);
+
+        await using var verifyContext = _fixture.CreateContext();
+        var verifyRepository = new RecurringExpenseRepository(verifyContext);
+        var verified = await verifyRepository.GetByIdAsync(expense.GetId());
+
+        Assert.Equal(new DateOnly(2027, 3, 1), verified!.GetEndDate().GetValue());
+        Assert.Equal(7, verified.GetOccurrences().Count); // Sep..Dec 2026 + Jan..Mar 2027
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ReducedEndDateRemovesOccurrences_PersistsTheRemovalsAsRealDeletes()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 6, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+        Assert.Equal(6, expense.GetOccurrences().Count); // Jan..Jun
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repository = new RecurringExpenseRepository(context);
+            await repository.AddAsync(expense);
+        }
+
+        await using var updateContext = _fixture.CreateContext();
+        var updateRepository = new RecurringExpenseRepository(updateContext);
+        var trackedExpense = await updateRepository.GetByIdAsync(expense.GetId());
+
+        trackedExpense!.ChangeEndDate(new CalendarDate(new DateOnly(2026, 3, 15)), new ReferencePeriod(2026, 1));
+        await updateRepository.UpdateAsync(trackedExpense);
+
+        await using var verifyContext = _fixture.CreateContext();
+        var verifyRepository = new RecurringExpenseRepository(verifyContext);
+        var verified = await verifyRepository.GetByIdAsync(expense.GetId());
+
+        // Not merely absent from the in-memory _occurrences list — actually gone from the DB.
+        Assert.Equal(3, verified!.GetOccurrences().Count); // Jan, Feb, Mar
+        var remainingCompetencias = verified.GetOccurrences()
+            .Select(o => (o.GetReferencePeriod().Year, o.GetReferencePeriod().Month))
+            .ToHashSet();
+        Assert.Equal(
+            new HashSet<(int, int)> { (2026, 1), (2026, 2), (2026, 3) },
+            remainingCompetencias);
     }
 }

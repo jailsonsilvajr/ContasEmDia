@@ -7,6 +7,7 @@ public sealed record RecurringExpenseData(
     decimal MonthlyAmount,
     int DueDay,
     DateOnly StartDate,
+    DateOnly EndDate,
     string Frequency,
     string Status,
     string? Note);

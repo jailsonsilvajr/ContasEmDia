@@ -22,6 +22,7 @@ public sealed class CreateRecurringExpenseUseCaseOutput
         decimal? monthlyAmount,
         int? dueDay,
         DateOnly? startDate,
+        DateOnly? endDate,
         string? frequency,
         string? status,
         string? note,
@@ -35,6 +36,7 @@ public sealed class CreateRecurringExpenseUseCaseOutput
         MonthlyAmount = monthlyAmount;
         DueDay = dueDay;
         StartDate = startDate;
+        EndDate = endDate;
         Frequency = frequency;
         Status = status;
         Note = note;
@@ -56,6 +58,8 @@ public sealed class CreateRecurringExpenseUseCaseOutput
 
     public DateOnly? StartDate { get; }
 
+    public DateOnly? EndDate { get; }
+
     public string? Frequency { get; }
 
     public string? Status { get; }
@@ -73,6 +77,7 @@ public sealed class CreateRecurringExpenseUseCaseOutput
         decimal monthlyAmount,
         int dueDay,
         DateOnly startDate,
+        DateOnly endDate,
         string frequency,
         string status,
         string? note,
@@ -85,6 +90,7 @@ public sealed class CreateRecurringExpenseUseCaseOutput
             monthlyAmount: monthlyAmount,
             dueDay: dueDay,
             startDate: startDate,
+            endDate: endDate,
             frequency: frequency,
             status: status,
             note: note,
@@ -100,6 +106,7 @@ public sealed class CreateRecurringExpenseUseCaseOutput
             monthlyAmount: null,
             dueDay: null,
             startDate: null,
+            endDate: null,
             frequency: null,
             status: null,
             note: null,

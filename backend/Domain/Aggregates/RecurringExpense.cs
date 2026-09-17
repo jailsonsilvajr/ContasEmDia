@@ -11,6 +11,7 @@ public sealed class RecurringExpense
     private Money _monthlyAmount;
     private DueDay _dueDay;
     private CalendarDate _startDate;
+    private CalendarDate _endDate;
     private readonly Frequency _frequency;
     private RecurringExpenseStatus _status;
     private Note _note;
@@ -22,25 +23,27 @@ public sealed class RecurringExpense
         Money monthlyAmount,
         DueDay dueDay,
         CalendarDate startDate,
+        CalendarDate endDate,
         Frequency frequency,
         RecurringExpenseStatus status,
         Note note,
         ReferencePeriod currentReferencePeriod)
     {
+        ValidateVigencia(startDate, endDate);
+        ValidateEndDateNotInPast(endDate, currentReferencePeriod);
+
         _id = Guid.NewGuid();
         _name = name;
         _category = category;
         _monthlyAmount = monthlyAmount;
         _dueDay = dueDay;
         _startDate = startDate;
+        _endDate = endDate;
         _frequency = frequency;
         _status = status;
         _note = note;
 
-        if (status.GetValue() == RecurringExpenseStatusType.Active)
-        {
-            GenerateOccurrenceForCurrentPeriodIfDue(currentReferencePeriod);
-        }
+        GenerateOccurrencesForVigencia(currentReferencePeriod);
     }
 
     private RecurringExpense(
@@ -50,6 +53,7 @@ public sealed class RecurringExpense
         Money monthlyAmount,
         DueDay dueDay,
         CalendarDate startDate,
+        CalendarDate endDate,
         Frequency frequency,
         RecurringExpenseStatus status,
         Note note)
@@ -60,6 +64,7 @@ public sealed class RecurringExpense
         _monthlyAmount = monthlyAmount;
         _dueDay = dueDay;
         _startDate = startDate;
+        _endDate = endDate;
         _frequency = frequency;
         _status = status;
         _note = note ?? new Note(null);
@@ -76,6 +81,8 @@ public sealed class RecurringExpense
     public DueDay GetDueDay() => _dueDay;
 
     public CalendarDate GetStartDate() => _startDate;
+
+    public CalendarDate GetEndDate() => _endDate;
 
     public Frequency GetFrequency() => _frequency;
 
@@ -117,7 +124,47 @@ public sealed class RecurringExpense
 
     public void ChangeStartDate(CalendarDate newStartDate)
     {
+        ValidateVigencia(newStartDate, _endDate);
+
         _startDate = newStartDate;
+    }
+
+    public void ChangeEndDate(CalendarDate newEndDate, ReferencePeriod currentReferencePeriod)
+    {
+        ValidateVigencia(_startDate, newEndDate);
+        ValidateEndDateNotInPast(newEndDate, currentReferencePeriod);
+
+        var newPeriod = ReferencePeriod.FromDate(newEndDate.GetValue());
+        var oldPeriod = ReferencePeriod.FromDate(_endDate.GetValue());
+
+        if (newPeriod > oldPeriod)
+        {
+            _endDate = newEndDate;
+
+            for (var period = oldPeriod.Next(); period <= newPeriod; period = period.Next())
+            {
+                GenerateOccurrenceForPeriodIfMissing(period);
+            }
+        }
+        else if (newPeriod < oldPeriod)
+        {
+            var hasPaidOccurrenceBeingRemoved = _occurrences.Any(occurrence =>
+                occurrence.GetReferencePeriod() > newPeriod &&
+                occurrence.GetStatus().GetValue() == OccurrenceStatusType.Paid);
+
+            if (hasPaidOccurrenceBeingRemoved)
+            {
+                throw new DomainRuleViolationException(
+                    "Não é possível reduzir a vigência: existe uma ocorrência já paga no período que seria removido.");
+            }
+
+            _endDate = newEndDate;
+            _occurrences.RemoveAll(occurrence => occurrence.GetReferencePeriod() > newPeriod);
+        }
+        else
+        {
+            _endDate = newEndDate;
+        }
     }
 
     public void ChangeNote(Note newNote)
@@ -133,20 +180,59 @@ public sealed class RecurringExpense
     public void Reactivate(ReferencePeriod currentReferencePeriod)
     {
         _status = new RecurringExpenseStatus(RecurringExpenseStatusType.Active);
-        GenerateOccurrenceForCurrentPeriodIfDue(currentReferencePeriod);
+
+        var startPeriod = ReferencePeriod.FromDate(_startDate.GetValue());
+        if (currentReferencePeriod >= startPeriod)
+        {
+            GenerateOccurrenceForPeriodIfMissing(currentReferencePeriod);
+        }
     }
 
-    private void GenerateOccurrenceForCurrentPeriodIfDue(ReferencePeriod currentReferencePeriod)
+    private static void ValidateVigencia(CalendarDate startDate, CalendarDate endDate)
+    {
+        if (endDate.GetValue() <= startDate.GetValue())
+        {
+            throw new DomainRuleViolationException("A data de fim deve ser posterior à data de início.");
+        }
+
+        if (endDate.GetValue() > startDate.GetValue().AddYears(1))
+        {
+            throw new DomainRuleViolationException("A vigência não pode ultrapassar 1 ano a partir da data de início.");
+        }
+    }
+
+    private static void ValidateEndDateNotInPast(CalendarDate endDate, ReferencePeriod currentReferencePeriod)
+    {
+        if (ReferencePeriod.FromDate(endDate.GetValue()) < currentReferencePeriod)
+        {
+            throw new DomainRuleViolationException("A data de fim não pode estar no passado.");
+        }
+    }
+
+    private void GenerateOccurrenceForPeriodIfMissing(ReferencePeriod period)
+    {
+        if (GetOccurrencesForPeriod(period).Count == 0)
+        {
+            var daysInMonth = DateTime.DaysInMonth(period.Year, period.Month);
+            var dueDayOfMonth = Math.Min(_dueDay.GetValue(), daysInMonth);
+            var dueDate = new CalendarDate(new DateOnly(period.Year, period.Month, dueDayOfMonth));
+
+            _occurrences.Add(new Occurrence(period, dueDate, _name, _category, _monthlyAmount));
+        }
+    }
+
+    private void GenerateOccurrencesForVigencia(ReferencePeriod currentReferencePeriod)
     {
         var startPeriod = ReferencePeriod.FromDate(_startDate.GetValue());
-
-        if (currentReferencePeriod >= startPeriod && GetOccurrencesForPeriod(currentReferencePeriod).Count == 0)
+        if (currentReferencePeriod < startPeriod)
         {
-            var daysInMonth = DateTime.DaysInMonth(currentReferencePeriod.Year, currentReferencePeriod.Month);
-            var dueDayOfMonth = Math.Min(_dueDay.GetValue(), daysInMonth);
-            var dueDate = new CalendarDate(new DateOnly(currentReferencePeriod.Year, currentReferencePeriod.Month, dueDayOfMonth));
+            return;
+        }
 
-            _occurrences.Add(new Occurrence(currentReferencePeriod, dueDate, _name, _category, _monthlyAmount));
+        var endPeriod = ReferencePeriod.FromDate(_endDate.GetValue());
+        for (var period = currentReferencePeriod; period <= endPeriod; period = period.Next())
+        {
+            GenerateOccurrenceForPeriodIfMissing(period);
         }
     }
 

@@ -13,6 +13,7 @@ public static class RecurringExpenseDataResponseMapping
             MonthlyAmount: data.MonthlyAmount,
             DueDay: data.DueDay,
             StartDate: data.StartDate,
+            EndDate: data.EndDate,
             Frequency: data.Frequency,
             Status: data.Status,
             Note: data.Note);

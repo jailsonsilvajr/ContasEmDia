@@ -13,6 +13,7 @@ public static class CreateRecurringExpenseDataRequestMapping
             MonthlyAmount = request.MonthlyAmount!.Value,
             DueDay = request.DueDay!.Value,
             StartDate = request.StartDate!,
+            EndDate = request.EndDate!,
             Frequency = request.Frequency!,
             Status = request.Status!,
             Note = request.Note

@@ -16,6 +16,7 @@ public class InMemoryRecurringExpenseRepositoryTests
             new Money(1500m),
             new DueDay(10),
             new CalendarDate(new DateOnly(2026, 8, 1)),
+            new CalendarDate(new DateOnly(2026, 8, 31)),
             new Frequency(FrequencyType.Monthly),
             new RecurringExpenseStatus(status),
             new Note(note),

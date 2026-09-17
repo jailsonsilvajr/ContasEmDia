@@ -1,5 +1,6 @@
 using System.Globalization;
 using ContasEmDia.Application.Ports;
+using ContasEmDia.Domain;
 using ContasEmDia.Domain.Aggregates;
 using ContasEmDia.Domain.Repositories;
 using ContasEmDia.Domain.ValueObjects;
@@ -78,6 +79,16 @@ public sealed class CreateRecurringExpenseUseCase : ICreateRecurringExpenseUseCa
             errors.Add(new FieldError("startDate", "Data de início inválida."));
         }
 
+        CalendarDate? endDate = null;
+        if (DateOnly.TryParseExact(input.EndDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var endDateValue))
+        {
+            endDate = new CalendarDate(endDateValue);
+        }
+        else
+        {
+            errors.Add(new FieldError("endDate", "Data de fim inválida."));
+        }
+
         Frequency? frequency = null;
         if (Enum.TryParse<FrequencyType>(input.Frequency, out var frequencyType))
         {
@@ -121,16 +132,25 @@ public sealed class CreateRecurringExpenseUseCase : ICreateRecurringExpenseUseCa
 
         var currentReferencePeriod = ReferencePeriod.FromDate(_currentDateProvider.GetCurrentDate());
 
-        var recurringExpense = new RecurringExpense(
-            name!,
-            category!,
-            monthlyAmount!,
-            dueDay!,
-            startDate!,
-            frequency!,
-            status!,
-            note,
-            currentReferencePeriod);
+        RecurringExpense recurringExpense;
+        try
+        {
+            recurringExpense = new RecurringExpense(
+                name!,
+                category!,
+                monthlyAmount!,
+                dueDay!,
+                startDate!,
+                endDate!,
+                frequency!,
+                status!,
+                note,
+                currentReferencePeriod);
+        }
+        catch (DomainRuleViolationException ex)
+        {
+            return CreateRecurringExpenseUseCaseOutput.Failure([new FieldError("endDate", ex.Message)]);
+        }
 
         await _repositoryManager.RecurringExpenseRepository.AddAsync(recurringExpense);
 
@@ -153,6 +173,7 @@ public sealed class CreateRecurringExpenseUseCase : ICreateRecurringExpenseUseCa
             recurringExpense.GetMonthlyAmount().GetValue(),
             recurringExpense.GetDueDay().GetValue(),
             recurringExpense.GetStartDate().GetValue(),
+            recurringExpense.GetEndDate().GetValue(),
             recurringExpense.GetFrequency().GetValue().ToString(),
             recurringExpense.GetStatus().GetValue().ToString(),
             recurringExpense.GetNote().GetValue(),

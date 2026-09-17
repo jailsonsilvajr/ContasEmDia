@@ -1,3 +1,4 @@
+using ContasEmDia.Domain;
 using ContasEmDia.Domain.Aggregates;
 using ContasEmDia.Domain.ValueObjects;
 
@@ -11,20 +12,34 @@ public class RecurringExpenseTests
         decimal monthlyAmount = 1500m,
         int dueDay = 10,
         DateOnly? startDate = null,
+        DateOnly? endDate = null,
         RecurringExpenseStatusType status = RecurringExpenseStatusType.Active,
         string? note = null,
         ReferencePeriod? currentReferencePeriod = null)
     {
+        var resolvedStartDate = startDate ?? new DateOnly(2026, 8, 1);
+        var resolvedCurrentReferencePeriod = currentReferencePeriod ?? new ReferencePeriod(2026, 8);
+
+        // Default endDate covers only the later of startDate's/currentReferencePeriod's competência
+        // (same behavior most tests relied on pre-vigência: at most one occurrence generated).
+        var startPeriod = ReferencePeriod.FromDate(resolvedStartDate);
+        var defaultEndPeriod = startPeriod > resolvedCurrentReferencePeriod ? startPeriod : resolvedCurrentReferencePeriod;
+        var defaultEndDate = new DateOnly(
+            defaultEndPeriod.Year,
+            defaultEndPeriod.Month,
+            DateTime.DaysInMonth(defaultEndPeriod.Year, defaultEndPeriod.Month));
+
         return new RecurringExpense(
             new ExpenseName(name),
             new ExpenseCategory(category),
             new Money(monthlyAmount),
             new DueDay(dueDay),
-            new CalendarDate(startDate ?? new DateOnly(2026, 8, 1)),
+            new CalendarDate(resolvedStartDate),
+            new CalendarDate(endDate ?? defaultEndDate),
             new Frequency(FrequencyType.Monthly),
             new RecurringExpenseStatus(status),
             new Note(note),
-            currentReferencePeriod ?? new ReferencePeriod(2026, 8));
+            resolvedCurrentReferencePeriod);
     }
 
     [Fact]
@@ -81,14 +96,16 @@ public class RecurringExpenseTests
     }
 
     [Fact]
-    public void Constructor_PausedDespesa_GeneratesNoOccurrence()
+    public void Constructor_PausedDespesaWithStartDateOnOrBeforeCurrentCompetencia_StillGeneratesOccurrence()
     {
+        // Decision 1 (refinamento data-fim-despesa-recorrente): generation at cadastro no longer
+        // checks status — a Paused despesa generates its vigência's occurrences just like Active.
         var expense = CreateExpense(
             status: RecurringExpenseStatusType.Paused,
             startDate: new DateOnly(2026, 1, 1),
             currentReferencePeriod: new ReferencePeriod(2026, 8));
 
-        Assert.Empty(expense.GetOccurrences());
+        Assert.Single(expense.GetOccurrences());
     }
 
     [Fact]
@@ -326,5 +343,267 @@ public class RecurringExpenseTests
 
         Assert.Equal(RecurringExpenseStatusType.Active, expense.GetStatus().GetValue());
         Assert.Empty(expense.GetOccurrences());
+    }
+
+    [Fact]
+    public void Constructor_EndDateOnOrBeforeStartDate_ThrowsDomainRuleViolationException()
+    {
+        var exception = Assert.Throws<DomainRuleViolationException>(() => CreateExpense(
+            startDate: new DateOnly(2026, 8, 10),
+            endDate: new DateOnly(2026, 8, 10),
+            currentReferencePeriod: new ReferencePeriod(2026, 8)));
+
+        Assert.Equal("A data de fim deve ser posterior à data de início.", exception.Message);
+    }
+
+    [Fact]
+    public void Constructor_EndDateBeyondOneYearFromStartDate_ThrowsDomainRuleViolationException()
+    {
+        var exception = Assert.Throws<DomainRuleViolationException>(() => CreateExpense(
+            startDate: new DateOnly(2026, 8, 1),
+            endDate: new DateOnly(2027, 8, 2),
+            currentReferencePeriod: new ReferencePeriod(2026, 8)));
+
+        Assert.Equal("A vigência não pode ultrapassar 1 ano a partir da data de início.", exception.Message);
+    }
+
+    [Fact]
+    public void Constructor_EndDateCompetenciaBeforeCurrentReferencePeriod_ThrowsDomainRuleViolationException()
+    {
+        var exception = Assert.Throws<DomainRuleViolationException>(() => CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 7, 15),
+            currentReferencePeriod: new ReferencePeriod(2026, 8)));
+
+        Assert.Equal("A data de fim não pode estar no passado.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(RecurringExpenseStatusType.Active)]
+    [InlineData(RecurringExpenseStatusType.Paused)]
+    public void Constructor_ValidVigenciaSpanningMultipleCompetencias_GeneratesOneOccurrencePerCompetencia(RecurringExpenseStatusType status)
+    {
+        var expense = CreateExpense(
+            status: status,
+            startDate: new DateOnly(2026, 8, 1),
+            endDate: new DateOnly(2026, 11, 15),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        Assert.Equal(4, expense.GetOccurrences().Count);
+        Assert.Equal(1, expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 8)).Count);
+        Assert.Equal(1, expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 9)).Count);
+        Assert.Equal(1, expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 10)).Count);
+        Assert.Equal(1, expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 11)).Count);
+    }
+
+    [Fact]
+    public void Constructor_StartDateStillInFuture_GeneratesNoOccurrenceRegardlessOfEndDate()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 9, 1),
+            endDate: new DateOnly(2026, 12, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        Assert.Empty(expense.GetOccurrences());
+    }
+
+    [Fact]
+    public void ChangeEndDate_ToLaterCompetencia_UpdatesEndDateAndAddsOccurrencesForNewlyCoveredCompetencias()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 8, 1),
+            endDate: new DateOnly(2026, 8, 31),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        expense.ChangeEndDate(new CalendarDate(new DateOnly(2026, 11, 15)), new ReferencePeriod(2026, 8));
+
+        Assert.Equal(new DateOnly(2026, 11, 15), expense.GetEndDate().GetValue());
+        Assert.Equal(4, expense.GetOccurrences().Count);
+        Assert.Equal(1, expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 9)).Count);
+        Assert.Equal(1, expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 10)).Count);
+        Assert.Equal(1, expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 11)).Count);
+    }
+
+    [Fact]
+    public void ChangeEndDate_CalledAgainWithSameLaterCompetencia_IsIdempotent()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 8, 1),
+            endDate: new DateOnly(2026, 8, 31),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        expense.ChangeEndDate(new CalendarDate(new DateOnly(2026, 11, 15)), new ReferencePeriod(2026, 8));
+        expense.ChangeEndDate(new CalendarDate(new DateOnly(2026, 11, 15)), new ReferencePeriod(2026, 8));
+
+        Assert.Equal(4, expense.GetOccurrences().Count);
+    }
+
+    [Fact]
+    public void ChangeEndDate_PreviousEndDateCompetenciaAlreadyInPast_FillsEveryCompetenciaInTheGapIncludingPastOnes()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 3, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+        Assert.Equal(3, expense.GetOccurrences().Count); // Jan, Feb, Mar
+
+        // "Now" has advanced to August; the despesa's old endDate (March) is already in the past.
+        expense.ChangeEndDate(new CalendarDate(new DateOnly(2026, 9, 1)), new ReferencePeriod(2026, 8));
+
+        Assert.Equal(new DateOnly(2026, 9, 1), expense.GetEndDate().GetValue());
+        Assert.Equal(9, expense.GetOccurrences().Count); // Jan..Sep
+        foreach (var month in new[] { 4, 5, 6, 7, 8, 9 })
+        {
+            Assert.Equal(1, expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, month)).Count);
+        }
+    }
+
+    [Fact]
+    public void ChangeEndDate_EndDateOnOrBeforeStartDate_ThrowsWithoutMutatingState()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 8, 1),
+            endDate: new DateOnly(2026, 8, 31),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrenceCountBefore = expense.GetOccurrences().Count;
+
+        var exception = Assert.Throws<DomainRuleViolationException>(
+            () => expense.ChangeEndDate(new CalendarDate(new DateOnly(2026, 7, 1)), new ReferencePeriod(2026, 8)));
+
+        Assert.Equal("A data de fim deve ser posterior à data de início.", exception.Message);
+        Assert.Equal(new DateOnly(2026, 8, 31), expense.GetEndDate().GetValue());
+        Assert.Equal(occurrenceCountBefore, expense.GetOccurrences().Count);
+    }
+
+    [Fact]
+    public void ChangeEndDate_BeyondOneYearFromStartDate_ThrowsWithoutMutatingState()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 8, 1),
+            endDate: new DateOnly(2026, 8, 31),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrenceCountBefore = expense.GetOccurrences().Count;
+
+        var exception = Assert.Throws<DomainRuleViolationException>(
+            () => expense.ChangeEndDate(new CalendarDate(new DateOnly(2027, 8, 2)), new ReferencePeriod(2026, 8)));
+
+        Assert.Equal("A vigência não pode ultrapassar 1 ano a partir da data de início.", exception.Message);
+        Assert.Equal(new DateOnly(2026, 8, 31), expense.GetEndDate().GetValue());
+        Assert.Equal(occurrenceCountBefore, expense.GetOccurrences().Count);
+    }
+
+    [Fact]
+    public void ChangeEndDate_CompetenciaBeforeCurrentReferencePeriod_ThrowsWithoutMutatingState()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 8, 31),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+        var occurrenceCountBefore = expense.GetOccurrences().Count;
+
+        var exception = Assert.Throws<DomainRuleViolationException>(
+            () => expense.ChangeEndDate(new CalendarDate(new DateOnly(2026, 6, 1)), new ReferencePeriod(2026, 8)));
+
+        Assert.Equal("A data de fim não pode estar no passado.", exception.Message);
+        Assert.Equal(new DateOnly(2026, 8, 31), expense.GetEndDate().GetValue());
+        Assert.Equal(occurrenceCountBefore, expense.GetOccurrences().Count);
+    }
+
+    [Fact]
+    public void ChangeEndDate_SameCompetenciaDifferentDay_UpdatesEndDateButTouchesNoOccurrence()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 8, 1),
+            endDate: new DateOnly(2026, 8, 10),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrenceCountBefore = expense.GetOccurrences().Count;
+
+        expense.ChangeEndDate(new CalendarDate(new DateOnly(2026, 8, 25)), new ReferencePeriod(2026, 8));
+
+        Assert.Equal(new DateOnly(2026, 8, 25), expense.GetEndDate().GetValue());
+        Assert.Equal(occurrenceCountBefore, expense.GetOccurrences().Count);
+    }
+
+    [Fact]
+    public void ChangeStartDate_NewStartDateNoLongerBeforeEndDate_ThrowsDomainRuleViolationException()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 8, 1),
+            endDate: new DateOnly(2026, 8, 31),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        var exception = Assert.Throws<DomainRuleViolationException>(
+            () => expense.ChangeStartDate(new CalendarDate(new DateOnly(2026, 9, 1))));
+
+        Assert.Equal("A data de fim deve ser posterior à data de início.", exception.Message);
+    }
+
+    [Fact]
+    public void ChangeStartDate_ResultingVigenciaExceedsOneYear_ThrowsDomainRuleViolationException()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2027, 1, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+
+        var exception = Assert.Throws<DomainRuleViolationException>(
+            () => expense.ChangeStartDate(new CalendarDate(new DateOnly(2025, 6, 1))));
+
+        Assert.Equal("A vigência não pode ultrapassar 1 ano a partir da data de início.", exception.Message);
+    }
+
+    [Fact]
+    public void ChangeStartDate_ValidNewStartDate_NeverChecksEndDateAgainstCurrentReferencePeriod()
+    {
+        // ChangeStartDate takes no currentReferencePeriod parameter at all — it can never call
+        // ValidateEndDateNotInPast, no matter how far in the past the despesa's _endDate already is.
+        var expense = CreateExpense(
+            startDate: new DateOnly(2020, 1, 1),
+            endDate: new DateOnly(2020, 6, 1),
+            currentReferencePeriod: new ReferencePeriod(2020, 1));
+
+        expense.ChangeStartDate(new CalendarDate(new DateOnly(2020, 2, 1)));
+
+        Assert.Equal(new DateOnly(2020, 2, 1), expense.GetStartDate().GetValue());
+    }
+
+    [Fact]
+    public void ChangeEndDate_ToEarlierCompetenciaWithNoPaidOccurrenceInRange_RemovesOccurrencesAfterNewEndDate()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 6, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+        Assert.Equal(6, expense.GetOccurrences().Count); // Jan..Jun
+
+        expense.ChangeEndDate(new CalendarDate(new DateOnly(2026, 3, 15)), new ReferencePeriod(2026, 1));
+
+        Assert.Equal(new DateOnly(2026, 3, 15), expense.GetEndDate().GetValue());
+        Assert.Equal(3, expense.GetOccurrences().Count); // Jan, Feb, Mar
+        Assert.Empty(expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 4)));
+        Assert.Empty(expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 5)));
+        Assert.Empty(expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 6)));
+    }
+
+    [Fact]
+    public void ChangeEndDate_ToEarlierCompetenciaExcludingAPaidOccurrence_ThrowsWithoutMutatingState()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 6, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+        var mayOccurrence = expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 5)).Single();
+        expense.MarkOccurrenceAsPaid(mayOccurrence.GetId(), new Money(1500m), new CalendarDate(new DateOnly(2026, 5, 5)));
+        var occurrenceCountBefore = expense.GetOccurrences().Count;
+
+        var exception = Assert.Throws<DomainRuleViolationException>(
+            () => expense.ChangeEndDate(new CalendarDate(new DateOnly(2026, 3, 15)), new ReferencePeriod(2026, 1)));
+
+        Assert.Equal(
+            "Não é possível reduzir a vigência: existe uma ocorrência já paga no período que seria removido.",
+            exception.Message);
+        Assert.Equal(new DateOnly(2026, 6, 1), expense.GetEndDate().GetValue());
+        Assert.Equal(occurrenceCountBefore, expense.GetOccurrences().Count);
+        Assert.Equal(OccurrenceStatusType.Paid, mayOccurrence.GetStatus().GetValue());
     }
 }

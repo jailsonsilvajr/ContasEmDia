@@ -24,6 +24,8 @@ public sealed class ReferencePeriod : IComparable<ReferencePeriod>
 
     public static ReferencePeriod FromDate(DateOnly date) => new(date.Year, date.Month);
 
+    public ReferencePeriod Next() => Month == 12 ? new ReferencePeriod(Year + 1, 1) : new ReferencePeriod(Year, Month + 1);
+
     public int CompareTo(ReferencePeriod? other)
     {
         if (other is null)

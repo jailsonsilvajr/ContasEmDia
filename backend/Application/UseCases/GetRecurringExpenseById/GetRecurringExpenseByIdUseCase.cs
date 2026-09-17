@@ -23,6 +23,7 @@ public sealed class GetRecurringExpenseByIdUseCase : IGetRecurringExpenseByIdUse
             recurringExpense.GetMonthlyAmount().GetValue(),
             recurringExpense.GetDueDay().GetValue(),
             recurringExpense.GetStartDate().GetValue(),
+            recurringExpense.GetEndDate().GetValue(),
             recurringExpense.GetFrequency().GetValue().ToString(),
             recurringExpense.GetStatus().GetValue().ToString(),
             recurringExpense.GetNote().GetValue());

@@ -33,6 +33,7 @@ public sealed class ExceptionHandlingMiddlewareTests : IClassFixture<ThrowingRep
             monthlyAmount = 1850.00m,
             dueDay = 10,
             startDate = "2026-09-01",
+            endDate = "2026-09-30",
             frequency = "Monthly",
             status = "Active",
             note = (string?)null
@@ -78,6 +79,7 @@ public sealed class ExceptionHandlingMiddlewareTests : IClassFixture<ThrowingRep
             monthlyAmount = 1850.00m,
             dueDay = 10,
             startDate = "2026-09-01",
+            endDate = "2026-09-30",
             status = "Active",
             note = (string?)null
         };
@@ -167,6 +169,7 @@ public sealed class AlreadyPaidOccurrenceWebApplicationFactory : WebApplicationF
             new Money(1500.00m),
             new DueDay(10),
             new CalendarDate(new DateOnly(period.Year, period.Month, 1)),
+            new CalendarDate(new DateOnly(period.Year, period.Month, DateTime.DaysInMonth(period.Year, period.Month))),
             new Frequency(FrequencyType.Monthly),
             new RecurringExpenseStatus(RecurringExpenseStatusType.Active),
             new Note(null),

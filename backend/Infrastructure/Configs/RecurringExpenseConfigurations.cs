@@ -43,6 +43,12 @@ public sealed class RecurringExpenseConfigurations : IEntityTypeConfiguration<Re
             .HasColumnType("date")
             .IsRequired();
 
+        builder.Property<CalendarDate>("_endDate")
+            .HasColumnName("EndDate")
+            .HasConversion(vo => vo.GetValue(), value => new CalendarDate(value))
+            .HasColumnType("date")
+            .IsRequired();
+
         builder.Property<Frequency>("_frequency")
             .HasColumnName("Frequency")
             .HasConversion(vo => (int)vo.GetValue(), value => new Frequency((FrequencyType)value))

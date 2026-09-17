@@ -76,7 +76,7 @@
 
       <div style="margin-bottom: 28px;">
         <h1 style="font-family: 'Sora', sans-serif; font-weight: 800; font-size: 24px; margin: 0;">Nova despesa recorrente</h1>
-        <p style="font-size: 14px; color: #667085; margin: 6px 0 0;">Cadastre uma conta que se repete todo mês. A ocorrência do mês atual é gerada automaticamente.</p>
+        <p style="font-size: 14px; color: #667085; margin: 6px 0 0;">Cadastre uma conta que se repete todo mês. Todas as ocorrências entre a data de início e a data de fim são geradas automaticamente (vigência máxima de 1 ano).</p>
       </div>
 
       <sc-if value="{{isSuccess}}" hint-placeholder-val="{{false}}">
@@ -86,7 +86,7 @@
           </svg>
           <div style="flex: 1;">
             <div style="font-weight: 700; font-size: 15px; color: #0F7B4E;">"{{nome}}" cadastrada</div>
-            <div style="font-size: 13px; color: #2E5A45; margin-top: 4px;">A ocorrência de agosto já aparece no painel mensal, com status pendente. Os próximos meses serão gerados automaticamente.</div>
+            <div style="font-size: 13px; color: #2E5A45; margin-top: 4px;">Todas as ocorrências entre a data de início e a data de fim já aparecem no painel mensal, com status pendente.</div>
             <div style="display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;">
               <button class="cd-btn-ghost" onClick="{{onNovaDespesa}}" style="background: #FFFFFF; border: 1px solid #B7E4CC; color: #0F7B4E; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: 'Public Sans', sans-serif;">Cadastrar nova despesa</button>
               <button class="cd-btn-ghost" onClick="{{onClickVoltar}}" style="background: #FFFFFF; border: 1px solid #B7E4CC; color: #0F7B4E; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: 'Public Sans', sans-serif;">Voltar ao painel</button>
@@ -169,6 +169,22 @@
                   <span style="font-size: 12px; color: #D92D20;">{{dataInicioErrorMsg}}</span>
                 </div>
               </sc-if>
+            </div>
+          </div>
+
+          <div class="cd-row-2">
+            <div style="flex: 1;">
+              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Data de fim</label>
+              <input class="cd-input" type="date" value="{{dataFim}}" onChange="{{onChangeDataFim}}" onBlur="{{onBlurDataFim}}" onClick="{{onOpenDatePicker}}" style="width: 100%; padding: 11px 12px; border: 1px solid {{dataFimBorderColor}}; border-radius: 8px; font-size: 14px; font-family: 'Public Sans', sans-serif; background: #FFFFFF; cursor: pointer;" />
+              <sc-if value="{{showDataFimError}}" hint-placeholder-val="{{false}}">
+                <div style="display: flex; align-items: center; gap: 5px; margin-top: 6px;">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#D92D20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="13"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  <span style="font-size: 12px; color: #D92D20;">{{dataFimErrorMsg}}</span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="flex: 1; display: flex; align-items: flex-end; padding-bottom: 11px;">
+              <span style="font-size: 12px; color: #98A2B3;">A despesa deixa de gerar novas ocorrências após esta data. Vigência máxima de 1 ano a partir do início.</span>
             </div>
           </div>
 
@@ -270,6 +286,12 @@ function maskMoneyDigits(raw) {
   return intPart + ',' + centsPart;
 }
 
+function addYearsIso(iso, years) {
+  var d = new Date(iso + 'T00:00:00');
+  d.setFullYear(d.getFullYear() + years);
+  return d.toISOString().slice(0, 10);
+}
+
 function parseMasked(str) {
   if (str == null || str === '') return NaN;
   return parseFloat(String(str).replace(/\./g, '').replace(',', '.'));
@@ -296,9 +318,10 @@ var INITIAL_FIELDS = {
   valor: '',
   dia: '',
   dataInicio: '',
+  dataFim: '',
   status: 'ativa',
   observacao: '',
-  touched: { nome: false, valor: false, dia: false, dataInicio: false },
+  touched: { nome: false, valor: false, dia: false, dataInicio: false, dataFim: false },
   submitAttempted: false
 };
 
@@ -321,12 +344,19 @@ class Component extends DCLogic {
     if (!s.dataInicio) {
       errors.dataInicio = 'Informe uma data de início.';
     }
+    if (!s.dataFim) {
+      errors.dataFim = 'Informe uma data de fim.';
+    } else if (s.dataInicio && s.dataFim <= s.dataInicio) {
+      errors.dataFim = 'A data de fim deve ser posterior à data de início.';
+    } else if (s.dataInicio && s.dataFim > addYearsIso(s.dataInicio, 1)) {
+      errors.dataFim = 'A vigência não pode ultrapassar 1 ano a partir da data de início.';
+    }
     return errors;
   }
 
   isDirty(s) {
     if (s.formStatus === 'success') return false;
-    return !!(s.nome || s.valor || s.dia || s.dataInicio || s.observacao);
+    return !!(s.nome || s.valor || s.dia || s.dataInicio || s.dataFim || s.observacao);
   }
 
   onChangeNome = (e) => { this.setState({ nome: e.target.value }); };
@@ -334,6 +364,7 @@ class Component extends DCLogic {
   onChangeValor = (e) => { this.setState({ valor: maskMoneyDigits(e.target.value) }); };
   onChangeDia = (e) => { this.setState({ dia: e.target.value }); };
   onChangeDataInicio = (e) => { this.setState({ dataInicio: e.target.value }); };
+  onChangeDataFim = (e) => { this.setState({ dataFim: e.target.value }); };
   onChangeObservacao = (e) => { this.setState({ observacao: e.target.value }); };
   onSetAtiva = () => { this.setState({ status: 'ativa' }); };
   onSetPausada = () => { this.setState({ status: 'pausada' }); };
@@ -348,6 +379,7 @@ class Component extends DCLogic {
   onBlurValor = () => { this.setState({ touched: Object.assign({}, this.state.touched, { valor: true }) }); };
   onBlurDia = () => { this.setState({ touched: Object.assign({}, this.state.touched, { dia: true }) }); };
   onBlurDataInicio = () => { this.setState({ touched: Object.assign({}, this.state.touched, { dataInicio: true }) }); };
+  onBlurDataFim = () => { this.setState({ touched: Object.assign({}, this.state.touched, { dataFim: true }) }); };
 
   onSalvar = () => {
     if (this.state.formStatus === 'loading') return;
@@ -355,7 +387,7 @@ class Component extends DCLogic {
     var errors = this.validate(this.state);
     if (Object.keys(errors).length > 0) {
       this.setState({
-        touched: { nome: true, valor: true, dia: true, dataInicio: true },
+        touched: { nome: true, valor: true, dia: true, dataInicio: true, dataFim: true },
         submitAttempted: true
       });
       return;
@@ -398,6 +430,7 @@ class Component extends DCLogic {
     var showValorError = reveal('valor');
     var showDiaError = reveal('dia');
     var showDataInicioError = reveal('dataInicio');
+    var showDataFimError = reveal('dataFim');
     var isLoading = s.formStatus === 'loading';
 
     return {
@@ -407,6 +440,7 @@ class Component extends DCLogic {
       valor: s.valor,
       dia: s.dia,
       dataInicio: s.dataInicio,
+      dataFim: s.dataFim,
       observacao: s.observacao,
       isAtiva: s.status === 'ativa',
       isPausada: s.status === 'pausada',
@@ -424,31 +458,36 @@ class Component extends DCLogic {
       showValorError: showValorError,
       showDiaError: showDiaError,
       showDataInicioError: showDataInicioError,
+      showDataFimError: showDataFimError,
       nomeErrorMsg: errors.nome || '',
       valorErrorMsg: errors.valor || '',
       diaErrorMsg: errors.dia || '',
       dataInicioErrorMsg: errors.dataInicio || '',
+      dataFimErrorMsg: errors.dataFim || '',
       nomeBorderColor: showNomeError ? '#FDA29B' : '#D0D5DD',
       valorBorderColor: showValorError ? '#FDA29B' : '#D0D5DD',
       diaBorderColor: showDiaError ? '#FDA29B' : '#D0D5DD',
       dataInicioBorderColor: showDataInicioError ? '#FDA29B' : '#D0D5DD',
+      dataFimBorderColor: showDataFimError ? '#FDA29B' : '#D0D5DD',
       nomeErrClass: showNomeError ? 'cd-err' : '',
       nomePreview: s.nome || 'Nome da despesa',
       catColor: CATEGORY_COLORS[s.categoria] || '#667085',
       valorFmt: formatEUR(isNaN(valorNum) ? 0 : valorNum),
       diaLabel: s.dia && !isNaN(diaNum) ? ('Dia ' + diaNum) : 'Dia --',
-      statusHelperLabel: s.status === 'ativa' ? 'Gera ocorrências mensais automaticamente.' : 'Pausada — não gera novas ocorrências.',
+      statusHelperLabel: s.status === 'ativa' ? 'Gera as ocorrências de toda a vigência automaticamente.' : 'Pausada — as ocorrências da vigência são geradas mesmo assim.',
       onChangeNome: this.onChangeNome,
       onChangeCategoria: this.onChangeCategoria,
       onChangeValor: this.onChangeValor,
       onChangeDia: this.onChangeDia,
       onChangeDataInicio: this.onChangeDataInicio,
+      onChangeDataFim: this.onChangeDataFim,
       onChangeObservacao: this.onChangeObservacao,
       onOpenDatePicker: this.onOpenDatePicker,
       onBlurNome: this.onBlurNome,
       onBlurValor: this.onBlurValor,
       onBlurDia: this.onBlurDia,
       onBlurDataInicio: this.onBlurDataInicio,
+      onBlurDataFim: this.onBlurDataFim,
       onSetAtiva: this.onSetAtiva,
       onSetPausada: this.onSetPausada,
       onSalvar: this.onSalvar,

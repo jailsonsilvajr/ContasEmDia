@@ -2,6 +2,7 @@ using System.Globalization;
 using ContasEmDia.Application.Ports;
 using ContasEmDia.Application.UseCases.CreateRecurringExpense;
 using ContasEmDia.Application.UseCases.GetRecurringExpenseById;
+using ContasEmDia.Domain;
 using ContasEmDia.Domain.Repositories;
 using ContasEmDia.Domain.ValueObjects;
 
@@ -82,6 +83,16 @@ public sealed class UpdateRecurringExpenseUseCase : IUpdateRecurringExpenseUseCa
             errors.Add(new FieldError("startDate", "Data de início inválida."));
         }
 
+        CalendarDate? endDate = null;
+        if (DateOnly.TryParseExact(input.EndDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var endDateValue))
+        {
+            endDate = new CalendarDate(endDateValue);
+        }
+        else
+        {
+            errors.Add(new FieldError("endDate", "Data de fim inválida."));
+        }
+
         RecurringExpenseStatus? status = null;
         if (Enum.TryParse<RecurringExpenseStatusType>(input.Status, out var statusType))
         {
@@ -126,14 +137,41 @@ public sealed class UpdateRecurringExpenseUseCase : IUpdateRecurringExpenseUseCa
             recurringExpense.ChangeDueDay(dueDay);
         }
 
-        if (startDate!.GetValue() != recurringExpense.GetStartDate().GetValue())
-        {
-            recurringExpense.ChangeStartDate(startDate);
-        }
-
         if (note.GetValue() != recurringExpense.GetNote().GetValue())
         {
             recurringExpense.ChangeNote(note);
+        }
+
+        var currentReferencePeriod = ReferencePeriod.FromDate(_currentDateProvider.GetCurrentDate());
+        var crossFieldErrors = new List<FieldError>();
+
+        if (startDate!.GetValue() != recurringExpense.GetStartDate().GetValue())
+        {
+            try
+            {
+                recurringExpense.ChangeStartDate(startDate);
+            }
+            catch (DomainRuleViolationException ex)
+            {
+                crossFieldErrors.Add(new FieldError("startDate", ex.Message));
+            }
+        }
+
+        if (endDate!.GetValue() != recurringExpense.GetEndDate().GetValue())
+        {
+            try
+            {
+                recurringExpense.ChangeEndDate(endDate, currentReferencePeriod);
+            }
+            catch (DomainRuleViolationException ex)
+            {
+                crossFieldErrors.Add(new FieldError("endDate", ex.Message));
+            }
+        }
+
+        if (crossFieldErrors.Count > 0)
+        {
+            return UpdateRecurringExpenseUseCaseOutput.Failure(crossFieldErrors);
         }
 
         var currentStatus = recurringExpense.GetStatus().GetValue();
@@ -145,7 +183,7 @@ public sealed class UpdateRecurringExpenseUseCase : IUpdateRecurringExpenseUseCa
             }
             else if (status.GetValue() == RecurringExpenseStatusType.Active)
             {
-                recurringExpense.Reactivate(ReferencePeriod.FromDate(_currentDateProvider.GetCurrentDate()));
+                recurringExpense.Reactivate(currentReferencePeriod);
             }
         }
 
@@ -158,6 +196,7 @@ public sealed class UpdateRecurringExpenseUseCase : IUpdateRecurringExpenseUseCa
             recurringExpense.GetMonthlyAmount().GetValue(),
             recurringExpense.GetDueDay().GetValue(),
             recurringExpense.GetStartDate().GetValue(),
+            recurringExpense.GetEndDate().GetValue(),
             recurringExpense.GetFrequency().GetValue().ToString(),
             recurringExpense.GetStatus().GetValue().ToString(),
             recurringExpense.GetNote().GetValue());

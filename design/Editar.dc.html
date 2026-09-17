@@ -252,6 +252,22 @@
               </div>
             </div>
 
+            <div class="cd-row-2">
+              <div style="flex: 1;">
+                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Data de fim</label>
+                <input class="cd-input" type="date" value="{{dataFim}}" onChange="{{onChangeDataFim}}" onBlur="{{onBlurDataFim}}" onClick="{{onOpenDatePicker}}" style="width: 100%; padding: 11px 12px; border: 1px solid {{dataFimBorderColor}}; border-radius: 8px; font-size: 14px; font-family: 'Public Sans', sans-serif; background: #FFFFFF; cursor: pointer;" />
+                <sc-if value="{{showDataFimError}}" hint-placeholder-val="{{false}}">
+                  <div style="display: flex; align-items: center; gap: 5px; margin-top: 6px;">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#D92D20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="13"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <span style="font-size: 12px; color: #D92D20;">{{dataFimErrorMsg}}</span>
+                  </div>
+                </sc-if>
+              </div>
+              <div style="flex: 1; display: flex; align-items: flex-end; padding-bottom: 11px;">
+                <span style="font-size: 12px; color: #98A2B3;">A despesa deixa de gerar novas ocorrências após esta data. Vigência máxima de 1 ano a partir do início.</span>
+              </div>
+            </div>
+
             <div>
               <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Frequência</label>
               <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -363,6 +379,12 @@ function formatEUR(v) {
   return (v < 0 ? '-' : '') + intPart + ',' + parts[1] + ' €';
 }
 
+function addYearsIso(iso, years) {
+  var d = new Date(iso + 'T00:00:00');
+  d.setFullYear(d.getFullYear() + years);
+  return d.toISOString().slice(0, 10);
+}
+
 var CATEGORY_COLORS = {
   'Moradia': '#2E6FF2',
   'Serviços': '#0E9384',
@@ -377,11 +399,12 @@ var SAMPLE_DESPESA = {
   valor: '1.500,00',
   dia: '10',
   dataInicio: '2025-03-10',
+  dataFim: '2026-03-10',
   status: 'ativa',
   observacao: 'Contrato nº 1234, pago no cartão final 4321'
 };
 
-var EMPTY_FIELDS = { nome: '', categoria: 'Moradia', valor: '', dia: '', dataInicio: '', status: 'ativa', observacao: '' };
+var EMPTY_FIELDS = { nome: '', categoria: 'Moradia', valor: '', dia: '', dataInicio: '', dataFim: '', status: 'ativa', observacao: '' };
 
 class Component extends DCLogic {
   state = Object.assign({
@@ -389,7 +412,7 @@ class Component extends DCLogic {
     formStatus: 'idle',
     showExitConfirm: false,
     initial: null,
-    touched: { nome: false, valor: false, dia: false, dataInicio: false },
+    touched: { nome: false, valor: false, dia: false, dataInicio: false, dataFim: false },
     submitAttempted: false
   }, EMPTY_FIELDS);
 
@@ -432,6 +455,13 @@ class Component extends DCLogic {
     if (!s.dataInicio) {
       errors.dataInicio = 'Informe uma data de início.';
     }
+    if (!s.dataFim) {
+      errors.dataFim = 'Informe uma data de fim.';
+    } else if (s.dataInicio && s.dataFim <= s.dataInicio) {
+      errors.dataFim = 'A data de fim deve ser posterior à data de início.';
+    } else if (s.dataInicio && s.dataFim > addYearsIso(s.dataInicio, 1)) {
+      errors.dataFim = 'A vigência não pode ultrapassar 1 ano a partir da data de início.';
+    }
     return errors;
   }
 
@@ -443,6 +473,7 @@ class Component extends DCLogic {
       s.valor !== s.initial.valor ||
       s.dia !== s.initial.dia ||
       s.dataInicio !== s.initial.dataInicio ||
+      s.dataFim !== s.initial.dataFim ||
       s.status !== s.initial.status ||
       s.observacao !== s.initial.observacao
     );
@@ -453,6 +484,7 @@ class Component extends DCLogic {
   onChangeValor = (e) => { this.setState({ valor: maskMoneyDigits(e.target.value) }); };
   onChangeDia = (e) => { this.setState({ dia: e.target.value }); };
   onChangeDataInicio = (e) => { this.setState({ dataInicio: e.target.value }); };
+  onChangeDataFim = (e) => { this.setState({ dataFim: e.target.value }); };
   onChangeObservacao = (e) => { this.setState({ observacao: e.target.value }); };
   onSetAtiva = () => { this.setState({ status: 'ativa' }); };
   onSetPausada = () => { this.setState({ status: 'pausada' }); };
@@ -467,6 +499,7 @@ class Component extends DCLogic {
   onBlurValor = () => { this.setState({ touched: Object.assign({}, this.state.touched, { valor: true }) }); };
   onBlurDia = () => { this.setState({ touched: Object.assign({}, this.state.touched, { dia: true }) }); };
   onBlurDataInicio = () => { this.setState({ touched: Object.assign({}, this.state.touched, { dataInicio: true }) }); };
+  onBlurDataFim = () => { this.setState({ touched: Object.assign({}, this.state.touched, { dataFim: true }) }); };
 
   onTentarNovamenteCarregar = () => {
     this.loadDespesa();
@@ -478,7 +511,7 @@ class Component extends DCLogic {
     var errors = this.validate(this.state);
     if (Object.keys(errors).length > 0) {
       this.setState({
-        touched: { nome: true, valor: true, dia: true, dataInicio: true },
+        touched: { nome: true, valor: true, dia: true, dataInicio: true, dataFim: true },
         submitAttempted: true
       });
       return;
@@ -494,7 +527,7 @@ class Component extends DCLogic {
       var s = self.state;
       self.setState({
         formStatus: 'success',
-        initial: { nome: s.nome, categoria: s.categoria, valor: s.valor, dia: s.dia, dataInicio: s.dataInicio, status: s.status, observacao: s.observacao }
+        initial: { nome: s.nome, categoria: s.categoria, valor: s.valor, dia: s.dia, dataInicio: s.dataInicio, dataFim: s.dataFim, status: s.status, observacao: s.observacao }
       });
     }, 900);
   };
@@ -525,6 +558,7 @@ class Component extends DCLogic {
     var showValorError = reveal('valor');
     var showDiaError = reveal('dia');
     var showDataInicioError = reveal('dataInicio');
+    var showDataFimError = reveal('dataFim');
     var isSaving = s.formStatus === 'loading';
 
     return {
@@ -534,6 +568,7 @@ class Component extends DCLogic {
       valor: s.valor,
       dia: s.dia,
       dataInicio: s.dataInicio,
+      dataFim: s.dataFim,
       observacao: s.observacao,
       isAtiva: s.status === 'ativa',
       isPausada: s.status === 'pausada',
@@ -556,14 +591,17 @@ class Component extends DCLogic {
       showValorError: showValorError,
       showDiaError: showDiaError,
       showDataInicioError: showDataInicioError,
+      showDataFimError: showDataFimError,
       nomeErrorMsg: errors.nome || '',
       valorErrorMsg: errors.valor || '',
       diaErrorMsg: errors.dia || '',
       dataInicioErrorMsg: errors.dataInicio || '',
+      dataFimErrorMsg: errors.dataFim || '',
       nomeBorderColor: showNomeError ? '#FDA29B' : '#D0D5DD',
       valorBorderColor: showValorError ? '#FDA29B' : '#D0D5DD',
       diaBorderColor: showDiaError ? '#FDA29B' : '#D0D5DD',
       dataInicioBorderColor: showDataInicioError ? '#FDA29B' : '#D0D5DD',
+      dataFimBorderColor: showDataFimError ? '#FDA29B' : '#D0D5DD',
       nomeErrClass: showNomeError ? 'cd-err' : '',
       nomePreview: s.nome || 'Nome da despesa',
       catColor: CATEGORY_COLORS[s.categoria] || '#667085',
@@ -577,12 +615,14 @@ class Component extends DCLogic {
       onChangeValor: this.onChangeValor,
       onChangeDia: this.onChangeDia,
       onChangeDataInicio: this.onChangeDataInicio,
+      onChangeDataFim: this.onChangeDataFim,
       onChangeObservacao: this.onChangeObservacao,
       onOpenDatePicker: this.onOpenDatePicker,
       onBlurNome: this.onBlurNome,
       onBlurValor: this.onBlurValor,
       onBlurDia: this.onBlurDia,
       onBlurDataInicio: this.onBlurDataInicio,
+      onBlurDataFim: this.onBlurDataFim,
       onSetAtiva: this.onSetAtiva,
       onSetPausada: this.onSetPausada,
       onSalvar: this.onSalvar,

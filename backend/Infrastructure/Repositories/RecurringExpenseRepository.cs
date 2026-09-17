@@ -68,13 +68,25 @@ public sealed class RecurringExpenseRepository : IRecurringExpenseRepository
 
     public async Task UpdateAsync(RecurringExpense recurringExpense)
     {
+        // A plain scalar projection (not `.Select(o => o)`) does not track any entities, so this
+        // read-only lookup cannot interfere with the Occurrence entries GetByIdAsync already
+        // attached to this context. Comparing against that separately-sourced id set — rather than
+        // inspecting each occurrence's EntityEntry.State — avoids a known EF Core pitfall: a
+        // never-before-seen entity reached via navigation from an already-tracked (Unchanged)
+        // parent, with a client-generated (non-database-generated) key, gets auto-fixed-up as
+        // Unchanged instead of Added, because EF cannot tell a "real" key value apart from a new
+        // one — which then produces an UPDATE affecting 0 rows instead of an INSERT.
+        var existingIds = await _context.Set<Occurrence>()
+            .Where(o => EF.Property<Guid>(o, "RecurringExpenseId") == recurringExpense.GetId())
+            .Select(o => EF.Property<Guid>(o, "_id"))
+            .ToListAsync();
+        var existingIdSet = existingIds.ToHashSet();
+
         foreach (var occurrence in recurringExpense.GetOccurrences())
         {
-            var entry = _context.Entry(occurrence);
-
-            if (entry.State == EntityState.Detached)
+            if (!existingIdSet.Contains(occurrence.GetId()))
             {
-                entry.State = EntityState.Added;
+                _context.Add(occurrence);
             }
         }
 

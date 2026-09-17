@@ -19,6 +19,9 @@ public sealed record UpdateRecurringExpenseDataRequest
     [Required(ErrorMessage = "Data de início é obrigatória.")]
     public string? StartDate { get; init; }
 
+    [Required(ErrorMessage = "Data de fim é obrigatória.")]
+    public string? EndDate { get; init; }
+
     [Required(ErrorMessage = "Status é obrigatório.")]
     public string? Status { get; init; }
 
