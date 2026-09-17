@@ -29,6 +29,7 @@ export interface CreateRecurringExpenseRequest {
   monthlyAmount: number;
   dueDay: number;
   startDate: string;
+  endDate: string;
   frequency: 'Monthly';
   status: 'Active' | 'Paused';
   note: string | null;
@@ -51,6 +52,7 @@ export interface CreateRecurringExpenseResponse {
   monthlyAmount: number;
   dueDay: number;
   startDate: string;
+  endDate: string;
   frequency: 'Monthly';
   status: 'Active' | 'Paused';
   note: string | null;
@@ -79,6 +81,7 @@ export interface RecurringExpenseDetailResponse {
   monthlyAmount: number;
   dueDay: number;
   startDate: string;
+  endDate: string;
   frequency: 'Monthly';
   status: 'Active' | 'Paused';
   note: string | null;

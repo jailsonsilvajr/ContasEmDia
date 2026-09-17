@@ -7,6 +7,7 @@ public sealed record CreateRecurringExpenseDataResponse(
     decimal MonthlyAmount,
     int DueDay,
     DateOnly StartDate,
+    DateOnly EndDate,
     string Frequency,
     string Status,
     string? Note,

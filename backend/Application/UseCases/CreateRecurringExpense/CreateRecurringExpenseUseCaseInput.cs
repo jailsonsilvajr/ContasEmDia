@@ -12,6 +12,8 @@ public sealed class CreateRecurringExpenseUseCaseInput
 
     public required string StartDate { get; init; }
 
+    public required string EndDate { get; init; }
+
     public required string Frequency { get; init; }
 
     public required string Status { get; init; }

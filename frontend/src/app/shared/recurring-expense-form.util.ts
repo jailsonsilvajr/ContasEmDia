@@ -40,3 +40,17 @@ export function getDataInicioError(dataInicio: string): string | null {
   if (!dataInicio.trim()) return 'Data de início é obrigatória.';
   return null;
 }
+
+export function addYearsIso(iso: string, years: number): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  d.setUTCFullYear(d.getUTCFullYear() + years);
+  return d.toISOString().slice(0, 10);
+}
+
+export function getDataFimError(dataInicio: string, dataFim: string): string | null {
+  if (!dataFim.trim()) return 'Data de fim é obrigatória.';
+  if (dataInicio && dataFim <= dataInicio) return 'A data de fim deve ser posterior à data de início.';
+  if (dataInicio && dataFim > addYearsIso(dataInicio, 1)) return 'A vigência não pode ultrapassar 1 ano a partir da data de início.';
+  return null;
+}

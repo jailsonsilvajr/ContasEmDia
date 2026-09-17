@@ -7,6 +7,8 @@ import {
   getValorError,
   getDiaError,
   getDataInicioError,
+  addYearsIso,
+  getDataFimError,
 } from './recurring-expense-form.util';
 
 describe('parseValor', () => {
@@ -94,5 +96,41 @@ describe('getDataInicioError', () => {
 
   it('accepts a filled start date', () => {
     expect(getDataInicioError('2026-09-10')).toBeNull();
+  });
+});
+
+describe('addYearsIso', () => {
+  it('adds the given number of years to an ISO date', () => {
+    expect(addYearsIso('2026-09-01', 1)).toBe('2027-09-01');
+  });
+
+  it('rolls Feb 29 on a leap year forward to Mar 1 on a non-leap year', () => {
+    expect(addYearsIso('2028-02-29', 1)).toBe('2029-03-01');
+  });
+});
+
+describe('getDataFimError', () => {
+  it('requires a non-blank end date', () => {
+    expect(getDataFimError('2026-09-01', '')).toBe('Data de fim é obrigatória.');
+  });
+
+  it('rejects an end date on or before the start date', () => {
+    expect(getDataFimError('2026-09-10', '2026-09-10')).toBe(
+      'A data de fim deve ser posterior à data de início.',
+    );
+    expect(getDataFimError('2026-09-10', '2026-09-05')).toBe(
+      'A data de fim deve ser posterior à data de início.',
+    );
+  });
+
+  it('rejects an end date beyond 1 year from the start date', () => {
+    expect(getDataFimError('2026-09-01', '2027-09-02')).toBe(
+      'A vigência não pode ultrapassar 1 ano a partir da data de início.',
+    );
+  });
+
+  it('accepts a valid end date within the 1-year vigência', () => {
+    expect(getDataFimError('2026-09-01', '2026-12-01')).toBeNull();
+    expect(getDataFimError('2026-09-01', '2027-09-01')).toBeNull();
   });
 });

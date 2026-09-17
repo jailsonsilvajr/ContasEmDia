@@ -17,6 +17,7 @@ const DETAIL: RecurringExpenseDetailResponse = {
   monthlyAmount: 1500,
   dueDay: 10,
   startDate: '2025-03-10',
+  endDate: '2026-03-10',
   frequency: 'Monthly',
   status: 'Active',
   note: 'Contrato nº 1234',
@@ -77,6 +78,7 @@ describe('EditarDespesaRecorrenteComponent', () => {
       expect(c.valor()).toBe('1.500,00');
       expect(c.dia()).toBe('10');
       expect(c.dataInicio()).toBe('2025-03-10');
+      expect(c.dataFim()).toBe('2026-03-10');
       expect(c.status()).toBe('ativa');
       expect(c.observacao()).toBe('Contrato nº 1234');
       expect(root.querySelector('[data-testid="loading-view"]')).toBeFalsy();
@@ -145,6 +147,7 @@ describe('EditarDespesaRecorrenteComponent', () => {
         monthlyAmount: 1600,
         dueDay: 10,
         startDate: '2025-03-10',
+        endDate: '2026-03-10',
         status: 'Active',
         note: 'Contrato nº 1234',
       });
@@ -180,6 +183,37 @@ describe('EditarDespesaRecorrenteComponent', () => {
       fixture.detectChanges();
 
       expect(fixture.componentInstance.formStatus()).toBe('success');
+    });
+
+    it('shows a required-field message for an empty dataFim on blur or submit', () => {
+      const dataFimInput = root.querySelector<HTMLInputElement>('[data-testid="data-fim-input"]')!;
+      setInputValue(dataFimInput, '');
+      dataFimInput.dispatchEvent(new Event('blur'));
+      fixture.detectChanges();
+      expect(root.querySelector('[data-testid="data-fim-error"]')?.textContent).toContain('obrigat');
+
+      root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
+      fixture.detectChanges();
+      expect(root.querySelector('[data-testid="data-fim-error"]')).toBeTruthy();
+      httpMock.expectNone(`/api/v1/recurring-expenses/${DESPESA_ID}`);
+    });
+
+    it('shows the "posterior à início" and "teto de 1 ano" messages for dataFim on blur or submit', () => {
+      const dataFimInput = root.querySelector<HTMLInputElement>('[data-testid="data-fim-input"]')!;
+
+      setInputValue(dataFimInput, '2025-03-10');
+      dataFimInput.dispatchEvent(new Event('blur'));
+      fixture.detectChanges();
+      expect(root.querySelector('[data-testid="data-fim-error"]')?.textContent).toContain(
+        'posterior à data de início',
+      );
+
+      setInputValue(dataFimInput, '2026-03-11');
+      dataFimInput.dispatchEvent(new Event('blur'));
+      fixture.detectChanges();
+      expect(root.querySelector('[data-testid="data-fim-error"]')?.textContent).toContain(
+        'não pode ultrapassar 1 ano',
+      );
     });
 
     it('shows the persistent reactivation helper text while status is "Ativa", updating immediately on toggle (FR-016)', () => {

@@ -12,19 +12,32 @@ public class UpdateRecurringExpenseUseCaseTests
         decimal monthlyAmount = 1500m,
         int dueDay = 10,
         DateOnly? startDate = null,
+        DateOnly? endDate = null,
         RecurringExpenseStatusType status = RecurringExpenseStatusType.Active,
         string? note = null,
-        ReferencePeriod? currentReferencePeriod = null) =>
-        new(
+        ReferencePeriod? currentReferencePeriod = null)
+    {
+        var resolvedStartDate = startDate ?? new DateOnly(2026, 8, 1);
+        var resolvedCurrentReferencePeriod = currentReferencePeriod ?? new ReferencePeriod(2026, 8);
+        var startPeriod = ReferencePeriod.FromDate(resolvedStartDate);
+        var defaultEndPeriod = startPeriod > resolvedCurrentReferencePeriod ? startPeriod : resolvedCurrentReferencePeriod;
+        var defaultEndDate = new DateOnly(
+            defaultEndPeriod.Year,
+            defaultEndPeriod.Month,
+            DateTime.DaysInMonth(defaultEndPeriod.Year, defaultEndPeriod.Month));
+
+        return new RecurringExpense(
             new ExpenseName(name),
             new ExpenseCategory(category),
             new Money(monthlyAmount),
             new DueDay(dueDay),
-            new CalendarDate(startDate ?? new DateOnly(2026, 8, 1)),
+            new CalendarDate(resolvedStartDate),
+            new CalendarDate(endDate ?? defaultEndDate),
             new Frequency(FrequencyType.Monthly),
             new RecurringExpenseStatus(status),
             new Note(note),
-            currentReferencePeriod ?? new ReferencePeriod(2026, 8));
+            resolvedCurrentReferencePeriod);
+    }
 
     private static UpdateRecurringExpenseUseCaseInput CreateInput(
         Guid id,
@@ -33,6 +46,7 @@ public class UpdateRecurringExpenseUseCaseTests
         decimal monthlyAmount = 1500m,
         int dueDay = 10,
         string startDate = "2026-08-01",
+        string endDate = "2026-08-31",
         string status = "Active",
         string? note = null) => new()
     {
@@ -42,6 +56,7 @@ public class UpdateRecurringExpenseUseCaseTests
         MonthlyAmount = monthlyAmount,
         DueDay = dueDay,
         StartDate = startDate,
+        EndDate = endDate,
         Status = status,
         Note = note,
     };
@@ -163,7 +178,7 @@ public class UpdateRecurringExpenseUseCaseTests
         var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
         repository.Seed(expense);
 
-        var input = CreateInput(expense.GetId(), monthlyAmount: 1500m, startDate: "2026-01-01", status: "Active");
+        var input = CreateInput(expense.GetId(), monthlyAmount: 1500m, startDate: "2026-01-01", endDate: "2026-08-31", status: "Active");
 
         var output = await useCase.ExecuteAsync(input);
 
@@ -185,7 +200,7 @@ public class UpdateRecurringExpenseUseCaseTests
         var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
         repository.Seed(expense);
 
-        var input = CreateInput(expense.GetId(), startDate: "2026-01-01", status: "Active");
+        var input = CreateInput(expense.GetId(), startDate: "2026-01-01", endDate: "2026-08-31", status: "Active");
 
         var output = await useCase.ExecuteAsync(input);
 
@@ -204,7 +219,7 @@ public class UpdateRecurringExpenseUseCaseTests
         var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
         repository.Seed(expense);
 
-        var input = CreateInput(expense.GetId(), startDate: "2026-09-01", status: "Active");
+        var input = CreateInput(expense.GetId(), startDate: "2026-09-01", endDate: "2026-09-30", status: "Active");
 
         var output = await useCase.ExecuteAsync(input);
 
@@ -223,5 +238,115 @@ public class UpdateRecurringExpenseUseCaseTests
         var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() => useCase.ExecuteAsync(input));
 
         Assert.Equal("Despesa recorrente não encontrada.", exception.Message);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ExtendingEndDate_ReturnsSuccessWithNewOccurrencesVisibleOnAggregate()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 8, 1),
+            endDate: new DateOnly(2026, 8, 31),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
+        repository.Seed(expense);
+
+        var input = CreateInput(expense.GetId(), endDate: "2026-10-31");
+
+        var output = await useCase.ExecuteAsync(input);
+
+        Assert.True(output.IsSuccess);
+        Assert.Equal(new DateOnly(2026, 10, 31), output.RecurringExpense!.EndDate);
+        Assert.Equal(3, expense.GetOccurrences().Count); // Aug, Sep, Oct
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ChangeEndDateDomainViolation_ReturnsFailureAndDoesNotMutateAggregate()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 8, 1),
+            endDate: new DateOnly(2026, 8, 31),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
+        repository.Seed(expense);
+
+        // Beyond the 1-year vigência cap from startDate.
+        var input = CreateInput(expense.GetId(), endDate: "2027-08-02");
+
+        var output = await useCase.ExecuteAsync(input);
+
+        Assert.False(output.IsSuccess);
+        var error = Assert.Single(output.Errors);
+        Assert.Equal("endDate", error.Field);
+        Assert.Equal(new DateOnly(2026, 8, 31), expense.GetEndDate().GetValue());
+        Assert.Single(expense.GetOccurrences());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ChangeStartDateDomainViolation_ReturnsFailureAndDoesNotMutateAggregate()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 8, 1),
+            endDate: new DateOnly(2026, 8, 31),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
+        repository.Seed(expense);
+
+        // New startDate would no longer be before the current endDate.
+        var input = CreateInput(expense.GetId(), startDate: "2026-09-01");
+
+        var output = await useCase.ExecuteAsync(input);
+
+        Assert.False(output.IsSuccess);
+        var error = Assert.Single(output.Errors);
+        Assert.Equal("startDate", error.Field);
+        Assert.Equal(new DateOnly(2026, 8, 1), expense.GetStartDate().GetValue());
+        Assert.Single(expense.GetOccurrences());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ReducingEndDateWithNoPaidOccurrenceInRange_ReturnsSuccessWithTrimmedOccurrenceList()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 6, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+        Assert.Equal(6, expense.GetOccurrences().Count);
+
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 1, 15));
+        repository.Seed(expense);
+
+        var input = CreateInput(expense.GetId(), startDate: "2026-01-01", endDate: "2026-03-15");
+
+        var output = await useCase.ExecuteAsync(input);
+
+        Assert.True(output.IsSuccess);
+        Assert.Equal(3, expense.GetOccurrences().Count);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ReducingEndDateExcludingAPaidOccurrence_ReturnsFailureAndDoesNotMutateAggregate()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 6, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+        var mayOccurrence = expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 5)).Single();
+        expense.MarkOccurrenceAsPaid(mayOccurrence.GetId(), new Money(1500m), new CalendarDate(new DateOnly(2026, 5, 5)));
+
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 1, 15));
+        repository.Seed(expense);
+
+        var input = CreateInput(expense.GetId(), startDate: "2026-01-01", endDate: "2026-03-15");
+
+        var output = await useCase.ExecuteAsync(input);
+
+        Assert.False(output.IsSuccess);
+        var error = Assert.Single(output.Errors);
+        Assert.Equal("endDate", error.Field);
+        Assert.Equal(new DateOnly(2026, 6, 1), expense.GetEndDate().GetValue());
+        Assert.Equal(6, expense.GetOccurrences().Count);
     }
 }

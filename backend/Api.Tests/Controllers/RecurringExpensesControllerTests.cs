@@ -15,13 +15,14 @@ public sealed class RecurringExpensesControllerTests : IClassFixture<CustomWebAp
         _client = factory.CreateClient();
     }
 
-    private static object ValidBody(string startDate, string status = "Active", string? note = null) => new
+    private static object ValidBody(string startDate, string? endDate = null, string status = "Active", string? note = null) => new
     {
         name = "Aluguel",
         category = "Housing",
         monthlyAmount = 1850.00m,
         dueDay = 10,
         startDate,
+        endDate = endDate ?? LastDayOfMonth(startDate),
         frequency = "Monthly",
         status,
         note
@@ -37,6 +38,25 @@ public sealed class RecurringExpensesControllerTests : IClassFixture<CustomWebAp
     {
         var today = DateOnly.FromDateTime(DateTime.Now);
         return new DateOnly(today.Year, today.Month, 1).AddMonths(1).ToString("yyyy-MM-dd");
+    }
+
+    private static string LastDayOfMonth(string isoDate)
+    {
+        var date = DateOnly.ParseExact(isoDate, "yyyy-MM-dd");
+        return new DateOnly(date.Year, date.Month, DateTime.DaysInMonth(date.Year, date.Month)).ToString("yyyy-MM-dd");
+    }
+
+    private static string NMonthsFromNowFirstDay(int n)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        return new DateOnly(today.Year, today.Month, 1).AddMonths(n).ToString("yyyy-MM-dd");
+    }
+
+    private static string NMonthsFromNowLastDay(int n)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var target = new DateOnly(today.Year, today.Month, 1).AddMonths(n);
+        return new DateOnly(target.Year, target.Month, DateTime.DaysInMonth(target.Year, target.Month)).ToString("yyyy-MM-dd");
     }
 
     private static void AssertAllPropertyNamesAreCamelCase(JsonElement element)
@@ -76,9 +96,25 @@ public sealed class RecurringExpensesControllerTests : IClassFixture<CustomWebAp
     }
 
     [Fact]
-    public async Task Post_ValidPausedBody_Returns201WithNoOccurrences()
+    public async Task Post_ValidPausedBodyInCurrentCompetencia_Returns201WithOneOccurrence()
     {
+        // Decision 1 (refinamento data-fim-despesa-recorrente): generation at cadastro no longer
+        // checks status — a Paused despesa generates its vigência's occurrences just like Active.
         var response = await _client.PostAsJsonAsync(Endpoint, ValidBody(FirstDayOfCurrentMonth(), status: "Paused"));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var root = body!.RootElement;
+
+        Assert.True(root.GetProperty("success").GetBoolean());
+        Assert.Equal(1, root.GetProperty("data").GetProperty("occurrences").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Post_ValidPausedBodyWithFutureCompetencia_Returns201WithNoOccurrences()
+    {
+        var response = await _client.PostAsJsonAsync(Endpoint, ValidBody(FirstDayOfNextMonth(), status: "Paused"));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
@@ -123,6 +159,7 @@ public sealed class RecurringExpensesControllerTests : IClassFixture<CustomWebAp
             monthlyAmount = 1850.00m,
             dueDay = 10,
             startDate = FirstDayOfCurrentMonth(),
+            endDate = LastDayOfMonth(FirstDayOfCurrentMonth()),
             frequency = "Monthly",
             status = "Active",
             note = (string?)null
@@ -153,6 +190,7 @@ public sealed class RecurringExpensesControllerTests : IClassFixture<CustomWebAp
             monthlyAmount = -1m,
             dueDay = 10,
             startDate = FirstDayOfCurrentMonth(),
+            endDate = LastDayOfMonth(FirstDayOfCurrentMonth()),
             frequency = "Monthly",
             status = "Active",
             note = (string?)null
@@ -248,5 +286,106 @@ public sealed class RecurringExpensesControllerTests : IClassFixture<CustomWebAp
         Assert.False(root.TryGetProperty("traceId", out _));
         Assert.True(root.TryGetProperty("success", out _));
         Assert.True(root.TryGetProperty("errors", out _));
+    }
+
+    [Fact]
+    public async Task Post_MissingEndDateField_Returns400WithEndDateFieldError()
+    {
+        var payload = new
+        {
+            name = "Aluguel",
+            category = "Housing",
+            monthlyAmount = 1850.00m,
+            dueDay = 10,
+            startDate = FirstDayOfCurrentMonth(),
+            frequency = "Monthly",
+            status = "Active"
+        };
+
+        var response = await _client.PostAsJsonAsync(Endpoint, payload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var root = body!.RootElement;
+        var errors = root.GetProperty("errors");
+
+        Assert.Contains(errors.EnumerateArray(), error =>
+            error.GetProperty("field").GetString() == "endDate" &&
+            error.GetProperty("message").GetString() == "Data de fim é obrigatória.");
+    }
+
+    [Fact]
+    public async Task Post_EndDateOnOrBeforeStartDate_Returns400WithEndDateDomainMessage()
+    {
+        var startDate = FirstDayOfCurrentMonth();
+        var response = await _client.PostAsJsonAsync(Endpoint, ValidBody(startDate, endDate: startDate));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var root = body!.RootElement;
+        var errors = root.GetProperty("errors");
+
+        Assert.Equal(1, errors.GetArrayLength());
+        Assert.Equal("endDate", errors[0].GetProperty("field").GetString());
+        Assert.Equal("A data de fim deve ser posterior à data de início.", errors[0].GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Post_EndDateBeyondOneYearFromStartDate_Returns400WithEndDateDomainMessage()
+    {
+        var startDate = FirstDayOfCurrentMonth();
+        var beyondOneYear = DateOnly.ParseExact(startDate, "yyyy-MM-dd").AddYears(1).AddDays(1).ToString("yyyy-MM-dd");
+
+        var response = await _client.PostAsJsonAsync(Endpoint, ValidBody(startDate, endDate: beyondOneYear));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var root = body!.RootElement;
+        var errors = root.GetProperty("errors");
+
+        Assert.Equal(1, errors.GetArrayLength());
+        Assert.Equal("endDate", errors[0].GetProperty("field").GetString());
+        Assert.Equal("A vigência não pode ultrapassar 1 ano a partir da data de início.", errors[0].GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task Post_EndDateCompetenciaBeforeCurrentReferencePeriod_Returns400WithEndDateDomainMessage()
+    {
+        var startDate = NMonthsFromNowFirstDay(-6);
+        var pastEndDate = NMonthsFromNowLastDay(-1);
+
+        var response = await _client.PostAsJsonAsync(Endpoint, ValidBody(startDate, endDate: pastEndDate));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var root = body!.RootElement;
+        var errors = root.GetProperty("errors");
+
+        Assert.Equal(1, errors.GetArrayLength());
+        Assert.Equal("endDate", errors[0].GetProperty("field").GetString());
+        Assert.Equal("A data de fim não pode estar no passado.", errors[0].GetProperty("message").GetString());
+    }
+
+    [Theory]
+    [InlineData("Active")]
+    [InlineData("Paused")]
+    public async Task Post_ValidVigenciaSpanningMultipleCompetencias_Returns201WithOneOccurrencePerCompetenciaAndEndDateEchoed(string status)
+    {
+        var startDate = FirstDayOfCurrentMonth();
+        var endDate = NMonthsFromNowLastDay(3);
+
+        var response = await _client.PostAsJsonAsync(Endpoint, ValidBody(startDate, endDate: endDate, status: status));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var data = body!.RootElement.GetProperty("data");
+
+        Assert.Equal(endDate, data.GetProperty("endDate").GetString());
+        Assert.Equal(4, data.GetProperty("occurrences").GetArrayLength());
     }
 }

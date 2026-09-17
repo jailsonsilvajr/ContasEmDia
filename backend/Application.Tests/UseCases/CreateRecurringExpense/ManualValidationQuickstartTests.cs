@@ -19,6 +19,7 @@ public class ManualValidationQuickstartTests
             MonthlyAmount = 0,
             DueDay = 10,
             StartDate = "2026-08-01",
+            EndDate = "2026-08-31",
             Frequency = "Monthly",
             Status = "Active",
         };

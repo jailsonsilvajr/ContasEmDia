@@ -11,6 +11,7 @@ public class CreateRecurringExpenseUseCaseTests
         decimal monthlyAmount = 1500m,
         int dueDay = 10,
         string startDate = "2026-08-01",
+        string endDate = "2026-08-31",
         string frequency = "Monthly",
         string status = "Active",
         string? note = null) => new()
@@ -20,6 +21,7 @@ public class CreateRecurringExpenseUseCaseTests
         MonthlyAmount = monthlyAmount,
         DueDay = dueDay,
         StartDate = startDate,
+        EndDate = endDate,
         Frequency = frequency,
         Status = status,
         Note = note,
@@ -71,18 +73,108 @@ public class CreateRecurringExpenseUseCaseTests
     }
 
     [Theory]
-    [InlineData("Paused", "2026-08-01")]
-    [InlineData("Active", "2026-09-01")]
-    public async Task ExecuteAsync_PausedOrFutureStartExpense_ReturnsSuccessWithEmptyOccurrenceList(string status, string startDate)
+    [InlineData("Active", "2026-09-01", "2026-09-30")]
+    [InlineData("Paused", "2026-09-01", "2026-09-30")]
+    public async Task ExecuteAsync_FutureStartExpense_ReturnsSuccessWithEmptyOccurrenceList(string status, string startDate, string endDate)
     {
         var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
-        var input = CreateValidInput(status: status, startDate: startDate);
+        var input = CreateValidInput(status: status, startDate: startDate, endDate: endDate);
 
         var output = await useCase.ExecuteAsync(input);
 
         Assert.True(output.IsSuccess);
         Assert.Single(repository.StoredExpenses);
         Assert.Empty(output.Occurrences!);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PausedExpenseStartingInCurrentCompetencia_ReturnsSuccessWithGeneratedOccurrence()
+    {
+        // Decision 1 (refinamento data-fim-despesa-recorrente): generation at cadastro no longer
+        // checks status — a Paused despesa generates its vigência's occurrences just like Active.
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
+        var input = CreateValidInput(status: "Paused", startDate: "2026-08-01", endDate: "2026-08-31");
+
+        var output = await useCase.ExecuteAsync(input);
+
+        Assert.True(output.IsSuccess);
+        Assert.Single(repository.StoredExpenses);
+        Assert.Single(output.Occurrences!);
+    }
+
+    [Theory]
+    [InlineData("Active")]
+    [InlineData("Paused")]
+    public async Task ExecuteAsync_ValidVigenciaSpanningMultipleCompetencias_ReturnsOneOccurrencePerCompetencia(string status)
+    {
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
+        var input = CreateValidInput(status: status, startDate: "2026-08-01", endDate: "2026-11-15");
+
+        var output = await useCase.ExecuteAsync(input);
+
+        Assert.True(output.IsSuccess);
+        Assert.Equal(new DateOnly(2026, 11, 15), output.EndDate);
+        Assert.Equal(4, output.Occurrences!.Count);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MalformedEndDate_ReturnsFieldErrorForEndDate()
+    {
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
+        var input = CreateValidInput(endDate: "not-a-date");
+
+        var output = await useCase.ExecuteAsync(input);
+
+        Assert.False(output.IsSuccess);
+        var error = Assert.Single(output.Errors);
+        Assert.Equal("endDate", error.Field);
+        Assert.Equal("Data de fim inválida.", error.Message);
+        Assert.Empty(repository.StoredExpenses);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_EndDateOnOrBeforeStartDate_ReturnsFieldErrorForEndDateWithDomainMessage()
+    {
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
+        var input = CreateValidInput(startDate: "2026-08-01", endDate: "2026-08-01");
+
+        var output = await useCase.ExecuteAsync(input);
+
+        Assert.False(output.IsSuccess);
+        var error = Assert.Single(output.Errors);
+        Assert.Equal("endDate", error.Field);
+        Assert.Equal("A data de fim deve ser posterior à data de início.", error.Message);
+        Assert.Empty(repository.StoredExpenses);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_EndDateBeyondOneYearFromStartDate_ReturnsFieldErrorForEndDateWithDomainMessage()
+    {
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
+        var input = CreateValidInput(startDate: "2026-08-01", endDate: "2027-08-02");
+
+        var output = await useCase.ExecuteAsync(input);
+
+        Assert.False(output.IsSuccess);
+        var error = Assert.Single(output.Errors);
+        Assert.Equal("endDate", error.Field);
+        Assert.Equal("A vigência não pode ultrapassar 1 ano a partir da data de início.", error.Message);
+        Assert.Empty(repository.StoredExpenses);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_EndDateCompetenciaBeforeCurrentReferencePeriod_ReturnsFieldErrorForEndDateWithDomainMessage()
+    {
+        var (useCase, repository) = CreateSut(new DateOnly(2026, 8, 15));
+        var input = CreateValidInput(startDate: "2026-01-01", endDate: "2026-07-15");
+
+        var output = await useCase.ExecuteAsync(input);
+
+        Assert.False(output.IsSuccess);
+        var error = Assert.Single(output.Errors);
+        Assert.Equal("endDate", error.Field);
+        Assert.Equal("A data de fim não pode estar no passado.", error.Message);
+        Assert.Empty(repository.StoredExpenses);
     }
 
     [Fact]

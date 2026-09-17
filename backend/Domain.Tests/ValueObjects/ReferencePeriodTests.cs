@@ -52,4 +52,26 @@ public class ReferencePeriodTests
         Assert.True(august.CompareTo(march) > 0);
         Assert.Equal(0, august.CompareTo(new ReferencePeriod(2026, 8)));
     }
+
+    [Fact]
+    public void Next_MonthBeforeDecember_ReturnsSameYearNextMonth()
+    {
+        var period = new ReferencePeriod(2026, 8);
+
+        var next = period.Next();
+
+        Assert.Equal(2026, next.Year);
+        Assert.Equal(9, next.Month);
+    }
+
+    [Fact]
+    public void Next_December_ReturnsNextYearJanuary()
+    {
+        var period = new ReferencePeriod(2026, 12);
+
+        var next = period.Next();
+
+        Assert.Equal(2027, next.Year);
+        Assert.Equal(1, next.Month);
+    }
 }

@@ -25,6 +25,7 @@ function fillValidForm(root: HTMLElement): void {
   setInputValue(root.querySelector('[data-testid="valor-input"]')!, '1500,50');
   setInputValue(root.querySelector('[data-testid="dia-input"]')!, '5');
   setInputValue(root.querySelector('[data-testid="data-inicio-input"]')!, '2026-09-01');
+  setInputValue(root.querySelector('[data-testid="data-fim-input"]')!, '2026-09-30');
 }
 
 describe('CadastroDespesaRecorrenteComponent', () => {
@@ -62,6 +63,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
       monthlyAmount: 1500.5,
       dueDay: 5,
       startDate: '2026-09-01',
+      endDate: '2026-09-30',
       frequency: 'Monthly',
       status: 'Active',
       note: null,
@@ -74,6 +76,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
       monthlyAmount: 1500.5,
       dueDay: 5,
       startDate: '2026-09-01',
+      endDate: '2026-09-30',
       frequency: 'Monthly',
       status: 'Active',
       note: null,
@@ -102,6 +105,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
         monthlyAmount: 1500.5,
         dueDay: 5,
         startDate: '2026-09-01',
+      endDate: '2026-09-30',
         frequency: 'Monthly',
         status: 'Active',
         note: null,
@@ -132,6 +136,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     setInputValue(root.querySelector('[data-testid="valor-input"]')!, '150');
     setInputValue(root.querySelector('[data-testid="dia-input"]')!, '10');
     setInputValue(root.querySelector('[data-testid="data-inicio-input"]')!, '2026-09-01');
+    setInputValue(root.querySelector('[data-testid="data-fim-input"]')!, '2026-09-30');
     fixture.detectChanges();
 
     root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
@@ -148,6 +153,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
         monthlyAmount: 150,
         dueDay: 10,
         startDate: '2026-09-01',
+      endDate: '2026-09-30',
         frequency: 'Monthly',
         status: 'Active',
         note: null,
@@ -279,9 +285,50 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     expect(root.querySelector('[data-testid="valor-error"]')).toBeTruthy();
     expect(root.querySelector('[data-testid="dia-error"]')).toBeTruthy();
     expect(root.querySelector('[data-testid="data-inicio-error"]')).toBeTruthy();
+    expect(root.querySelector('[data-testid="data-fim-error"]')).toBeTruthy();
     expect(root.querySelector('[data-testid="corrigir-banner"]')).toBeTruthy();
 
     httpMock.expectNone('/api/v1/recurring-expenses');
+  });
+
+  it('shows a required-field message for an empty dataFim on blur or submit', () => {
+    const dataFimInput = root.querySelector<HTMLInputElement>('[data-testid="data-fim-input"]')!;
+    expect(dataFimInput.type).toBe('date');
+
+    blur(dataFimInput);
+    fixture.detectChanges();
+    expect(root.querySelector('[data-testid="data-fim-error"]')?.textContent).toContain('obrigat');
+
+    root.querySelector<HTMLButtonElement>('[data-testid="salvar-btn"]')!.click();
+    fixture.detectChanges();
+    expect(root.querySelector('[data-testid="data-fim-error"]')).toBeTruthy();
+
+    httpMock.expectNone('/api/v1/recurring-expenses');
+  });
+
+  it('shows the "posterior à início" and "teto de 1 ano" messages for dataFim on blur or submit, and blocks isFormValid', () => {
+    setInputValue(root.querySelector('[data-testid="data-inicio-input"]')!, '2026-09-01');
+    const dataFimInput = root.querySelector<HTMLInputElement>('[data-testid="data-fim-input"]')!;
+
+    setInputValue(dataFimInput, '2026-09-01');
+    blur(dataFimInput);
+    fixture.detectChanges();
+    expect(root.querySelector('[data-testid="data-fim-error"]')?.textContent).toContain(
+      'posterior à data de início',
+    );
+    expect(fixture.componentInstance.isFormValid()).toBe(false);
+
+    setInputValue(dataFimInput, '2027-09-02');
+    blur(dataFimInput);
+    fixture.detectChanges();
+    expect(root.querySelector('[data-testid="data-fim-error"]')?.textContent).toContain(
+      'não pode ultrapassar 1 ano',
+    );
+    expect(fixture.componentInstance.isFormValid()).toBe(false);
+
+    setInputValue(dataFimInput, '2026-09-30');
+    fixture.detectChanges();
+    expect(root.querySelector('[data-testid="data-fim-error"]')).toBeFalsy();
   });
 
   it('shows the error banner and retains all field values on a network/5xx failure (US4-1, FR-015, SC-004)', () => {
@@ -301,6 +348,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
     expect(c.valor()).toBe('1.500,50');
     expect(c.dia()).toBe('5');
     expect(c.dataInicio()).toBe('2026-09-01');
+    expect(c.dataFim()).toBe('2026-09-30');
   });
 
   it('resends the same payload when "Tentar novamente" is clicked, without requiring re-entry (US4-2, FR-017)', () => {
@@ -327,6 +375,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
         monthlyAmount: 1500.5,
         dueDay: 5,
         startDate: '2026-09-01',
+      endDate: '2026-09-30',
         frequency: 'Monthly',
         status: 'Active',
         note: null,
@@ -374,6 +423,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
         monthlyAmount: 1500.5,
         dueDay: 5,
         startDate: '2026-09-01',
+      endDate: '2026-09-30',
         frequency: 'Monthly',
         status: 'Active',
         note: 'Pagamento via cartão',
@@ -482,6 +532,7 @@ describe('CadastroDespesaRecorrenteComponent', () => {
         monthlyAmount: 1500.5,
         dueDay: 5,
         startDate: '2026-09-01',
+      endDate: '2026-09-30',
         frequency: 'Monthly',
         status: 'Active',
         note: null,

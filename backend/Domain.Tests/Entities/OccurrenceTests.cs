@@ -21,6 +21,7 @@ public class OccurrenceTests
     private static Occurrence CreateOccurrence(DateOnly dueDate)
     {
         var startDate = new DateOnly(dueDate.Year, dueDate.Month, 1);
+        var endDate = new DateOnly(dueDate.Year, dueDate.Month, DateTime.DaysInMonth(dueDate.Year, dueDate.Month));
         var currentReferencePeriod = new ReferencePeriod(dueDate.Year, dueDate.Month);
 
         var expense = new RecurringExpense(
@@ -29,6 +30,7 @@ public class OccurrenceTests
             new Money(1500m),
             new DueDay(dueDate.Day),
             new CalendarDate(startDate),
+            new CalendarDate(endDate),
             new Frequency(FrequencyType.Monthly),
             new RecurringExpenseStatus(RecurringExpenseStatusType.Active),
             new Note(null),

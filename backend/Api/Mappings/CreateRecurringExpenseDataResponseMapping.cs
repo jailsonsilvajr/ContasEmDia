@@ -13,6 +13,7 @@ public static class CreateRecurringExpenseDataResponseMapping
             MonthlyAmount: output.MonthlyAmount!.Value,
             DueDay: output.DueDay!.Value,
             StartDate: output.StartDate!.Value,
+            EndDate: output.EndDate!.Value,
             Frequency: output.Frequency!,
             Status: output.Status!,
             Note: output.Note,

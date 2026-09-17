@@ -10,16 +10,26 @@ public class UndoOccurrencePaymentUseCaseTests
     private static RecurringExpense CreateExpense(
         int dueDay = 10,
         DateOnly? startDate = null,
-        ReferencePeriod? currentReferencePeriod = null) => new(
+        ReferencePeriod? currentReferencePeriod = null)
+    {
+        var resolvedStartDate = startDate ?? new DateOnly(2026, 8, 1);
+        var resolvedCurrentReferencePeriod = currentReferencePeriod ?? new ReferencePeriod(2026, 8);
+        var startPeriod = ReferencePeriod.FromDate(resolvedStartDate);
+        var endPeriod = startPeriod > resolvedCurrentReferencePeriod ? startPeriod : resolvedCurrentReferencePeriod;
+        var endDate = new DateOnly(endPeriod.Year, endPeriod.Month, DateTime.DaysInMonth(endPeriod.Year, endPeriod.Month));
+
+        return new RecurringExpense(
             new ExpenseName("Aluguel"),
             new ExpenseCategory(ExpenseCategoryType.Housing),
             new Money(1500m),
             new DueDay(dueDay),
-            new CalendarDate(startDate ?? new DateOnly(2026, 8, 1)),
+            new CalendarDate(resolvedStartDate),
+            new CalendarDate(endDate),
             new Frequency(FrequencyType.Monthly),
             new RecurringExpenseStatus(RecurringExpenseStatusType.Active),
             new Note(null),
-            currentReferencePeriod ?? new ReferencePeriod(2026, 8));
+            resolvedCurrentReferencePeriod);
+    }
 
     private static (UndoOccurrencePaymentUseCase UseCase, InMemoryRecurringExpenseRepository Repository) CreateSut(DateOnly currentDate)
     {
