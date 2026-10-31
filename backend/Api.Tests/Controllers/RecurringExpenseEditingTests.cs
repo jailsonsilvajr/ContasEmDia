@@ -542,4 +542,10 @@ internal sealed class EditingSeededRecurringExpenseRepository : IRecurringExpens
     public Task<RecurringExpense?> GetByOccurrenceIdAsync(Guid occurrenceId) => throw new NotImplementedException();
 
     public Task UpdateAsync(RecurringExpense recurringExpense) => Task.CompletedTask;
+
+    public Task RemoveAsync(RecurringExpense recurringExpense)
+    {
+        _store.RemoveAll(expense => expense.GetId() == recurringExpense.GetId());
+        return Task.CompletedTask;
+    }
 }

@@ -45,4 +45,10 @@ internal sealed class InMemoryRecurringExpenseRepository : IRecurringExpenseRepo
     }
 
     public Task UpdateAsync(RecurringExpense recurringExpense) => Task.CompletedTask;
+
+    public Task RemoveAsync(RecurringExpense recurringExpense)
+    {
+        _store.Remove(recurringExpense.GetId());
+        return Task.CompletedTask;
+    }
 }

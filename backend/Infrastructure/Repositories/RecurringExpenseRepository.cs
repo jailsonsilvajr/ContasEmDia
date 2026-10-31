@@ -26,7 +26,7 @@ public sealed class RecurringExpenseRepository : IRecurringExpenseRepository
     {
         return await _context.RecurringExpenses
             .Include("_occurrences")
-            .FirstOrDefaultAsync(e => EF.Property<Guid>(e, "_id") == id);
+            .FirstOrDefaultAsync(e => EF.Property<Guid>(e, "_id") == id && EF.Property<CalendarDate?>(e, "_deletedAt") == null);
     }
 
     public async Task<IReadOnlyCollection<RecurringExpense>> GetActiveAsync()
@@ -63,7 +63,9 @@ public sealed class RecurringExpenseRepository : IRecurringExpenseRepository
             return null;
         }
 
-        return await GetByIdAsync(recurringExpenseId.Value);
+        return await _context.RecurringExpenses
+            .Include("_occurrences")
+            .FirstOrDefaultAsync(e => EF.Property<Guid>(e, "_id") == recurringExpenseId.Value);
     }
 
     public async Task UpdateAsync(RecurringExpense recurringExpense)
@@ -90,6 +92,12 @@ public sealed class RecurringExpenseRepository : IRecurringExpenseRepository
             }
         }
 
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task RemoveAsync(RecurringExpense recurringExpense)
+    {
+        _context.RecurringExpenses.Remove(recurringExpense);
         await _context.SaveChangesAsync();
     }
 }

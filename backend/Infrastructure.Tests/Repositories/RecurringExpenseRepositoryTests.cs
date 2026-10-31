@@ -451,4 +451,91 @@ public sealed class RecurringExpenseRepositoryTests
             new HashSet<(int, int)> { (2026, 1), (2026, 2), (2026, 3) },
             remainingCompetencias);
     }
+
+    [Fact]
+    public async Task RemoveAsync_ExpenseWithPaidAndPendingOccurrences_DeletesExpenseAndEveryOccurrenceRow()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 2, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+        var paidOccurrence = expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 1)).Single();
+        var pendingOccurrence = expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 2)).Single();
+        expense.MarkOccurrenceAsPaid(paidOccurrence.GetId(), new Money(1500m), new CalendarDate(new DateOnly(2026, 1, 5)));
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repository = new RecurringExpenseRepository(context);
+            await repository.AddAsync(expense);
+        }
+
+        await using var removeContext = _fixture.CreateContext();
+        var removeRepository = new RecurringExpenseRepository(removeContext);
+        var tracked = await removeRepository.GetByIdAsync(expense.GetId());
+
+        await removeRepository.RemoveAsync(tracked!);
+
+        await using var verifyContext = _fixture.CreateContext();
+        var expensePersisted = await verifyContext.RecurringExpenses
+            .AnyAsync(e => EF.Property<Guid>(e, "_id") == expense.GetId());
+        var paidOccurrencePersisted = await verifyContext.Set<Occurrence>()
+            .AnyAsync(o => EF.Property<Guid>(o, "_id") == paidOccurrence.GetId());
+        var pendingOccurrencePersisted = await verifyContext.Set<Occurrence>()
+            .AnyAsync(o => EF.Property<Guid>(o, "_id") == pendingOccurrence.GetId());
+
+        Assert.False(expensePersisted);
+        Assert.False(paidOccurrencePersisted);
+        Assert.False(pendingOccurrencePersisted);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ExpenseDeletedKeepingPaidHistory_ReturnsNull()
+    {
+        var expense = CreateExpense(currentReferencePeriod: new ReferencePeriod(2026, 1));
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repository = new RecurringExpenseRepository(context);
+            await repository.AddAsync(expense);
+        }
+
+        await using var deleteContext = _fixture.CreateContext();
+        var deleteRepository = new RecurringExpenseRepository(deleteContext);
+        var tracked = await deleteRepository.GetByIdAsync(expense.GetId());
+        tracked!.DeleteKeepingPaidHistory(new CalendarDate(new DateOnly(2026, 1, 15)));
+        await deleteRepository.UpdateAsync(tracked);
+
+        await using var verifyContext = _fixture.CreateContext();
+        var verifyRepository = new RecurringExpenseRepository(verifyContext);
+        var retrieved = await verifyRepository.GetByIdAsync(expense.GetId());
+
+        Assert.Null(retrieved);
+    }
+
+    [Fact]
+    public async Task GetByOccurrenceIdAsync_ExpenseDeletedKeepingPaidHistory_StillFindsItsPaidOccurrence()
+    {
+        var expense = CreateExpense(startDate: new DateOnly(2026, 1, 1), currentReferencePeriod: new ReferencePeriod(2026, 1));
+        var occurrence = expense.GetOccurrences().Single();
+        expense.MarkOccurrenceAsPaid(occurrence.GetId(), new Money(1500m), new CalendarDate(new DateOnly(2026, 1, 5)));
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repository = new RecurringExpenseRepository(context);
+            await repository.AddAsync(expense);
+        }
+
+        await using var deleteContext = _fixture.CreateContext();
+        var deleteRepository = new RecurringExpenseRepository(deleteContext);
+        var tracked = await deleteRepository.GetByIdAsync(expense.GetId());
+        tracked!.DeleteKeepingPaidHistory(new CalendarDate(new DateOnly(2026, 1, 15)));
+        await deleteRepository.UpdateAsync(tracked);
+
+        await using var verifyContext = _fixture.CreateContext();
+        var verifyRepository = new RecurringExpenseRepository(verifyContext);
+        var retrieved = await verifyRepository.GetByOccurrenceIdAsync(occurrence.GetId());
+
+        Assert.NotNull(retrieved);
+        Assert.Equal(expense.GetId(), retrieved.GetId());
+    }
 }

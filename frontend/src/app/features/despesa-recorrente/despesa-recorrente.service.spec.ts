@@ -8,6 +8,7 @@ import type {
   ApiEnvelope,
   CreateRecurringExpenseRequest,
   CreateRecurringExpenseResponse,
+  DeleteRecurringExpenseResponse,
   RecurringExpenseDetailResponse,
   UpdateRecurringExpenseRequest,
   UpdateRecurringExpenseResponse,
@@ -215,6 +216,77 @@ describe('DespesaRecorrenteService', () => {
     });
 
     const req = httpMock.expectOne('/api/v1/recurring-expenses/abc-123');
+    req.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+
+    expect(error).toBeDefined();
+  });
+
+  it('DELETEs /api/v1/recurring-expenses/{id} with scope=pending-only and resolves with the envelope on 200', () => {
+    const response: DeleteRecurringExpenseResponse = { recurringExpenseId: 'abc-123', scope: 'pending-only' };
+    const envelope: ApiEnvelope<DeleteRecurringExpenseResponse> = { success: true, data: response, errors: null };
+
+    let result: ApiEnvelope<DeleteRecurringExpenseResponse> | undefined;
+    service.delete('abc-123', 'pending-only').subscribe((res) => (result = res));
+
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/recurring-expenses/abc-123');
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.params.get('scope')).toBe('pending-only');
+    req.flush(envelope);
+
+    expect(result).toEqual(envelope);
+  });
+
+  it('DELETEs /api/v1/recurring-expenses/{id} with scope=all and resolves with the envelope on 200', () => {
+    const response: DeleteRecurringExpenseResponse = { recurringExpenseId: 'abc-123', scope: 'all' };
+    const envelope: ApiEnvelope<DeleteRecurringExpenseResponse> = { success: true, data: response, errors: null };
+
+    let result: ApiEnvelope<DeleteRecurringExpenseResponse> | undefined;
+    service.delete('abc-123', 'all').subscribe((res) => (result = res));
+
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/recurring-expenses/abc-123');
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.params.get('scope')).toBe('all');
+    req.flush(envelope);
+
+    expect(result).toEqual(envelope);
+  });
+
+  it('surfaces a 400 from delete as-is to the caller', () => {
+    let error: unknown;
+    service.delete('abc-123', 'pending-only').subscribe({
+      next: () => undefined,
+      error: (err) => (error = err),
+    });
+
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/recurring-expenses/abc-123');
+    req.flush({ success: false, data: null, errors: null }, { status: 400, statusText: 'Bad Request' });
+
+    expect(error).toBeDefined();
+    expect((error as { status: number }).status).toBe(400);
+  });
+
+  it('surfaces a 404 from delete as-is to the caller', () => {
+    let error: unknown;
+    service.delete('missing-id', 'all').subscribe({
+      next: () => undefined,
+      error: (err) => (error = err),
+    });
+
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/recurring-expenses/missing-id');
+    req.flush({ success: false, data: null, errors: null }, { status: 404, statusText: 'Not Found' });
+
+    expect(error).toBeDefined();
+    expect((error as { status: number }).status).toBe(404);
+  });
+
+  it('surfaces a network failure from delete as-is to the caller', () => {
+    let error: unknown;
+    service.delete('abc-123', 'pending-only').subscribe({
+      next: () => undefined,
+      error: (err) => (error = err),
+    });
+
+    const req = httpMock.expectOne((r) => r.url === '/api/v1/recurring-expenses/abc-123');
     req.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
 
     expect(error).toBeDefined();

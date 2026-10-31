@@ -96,6 +96,22 @@ public sealed class ExceptionHandlingMiddlewareTests : IClassFixture<ThrowingRep
         Assert.Single(root.GetProperty("errors").EnumerateArray());
         Assert.DoesNotContain("StackTrace", body, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task Delete_WhenPersistenceThrows_Returns500WithGenericEnvelopeAndNoExceptionDetails()
+    {
+        var response = await _client.DeleteAsync($"/api/v1/recurring-expenses/{Guid.NewGuid()}?scope=all");
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var root = JsonDocument.Parse(body).RootElement;
+
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("data").ValueKind);
+        Assert.Single(root.GetProperty("errors").EnumerateArray());
+        Assert.DoesNotContain("StackTrace", body, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public sealed class DomainRuleViolationMiddlewareTests : IClassFixture<AlreadyPaidOccurrenceWebApplicationFactory>
@@ -252,6 +268,8 @@ internal sealed class SingleExpenseRecurringExpenseRepository : IRecurringExpens
     public Task<RecurringExpense?> GetByOccurrenceIdAsync(Guid occurrenceId) => Task.FromResult(_recurringExpense);
 
     public Task UpdateAsync(RecurringExpense recurringExpense) => Task.CompletedTask;
+
+    public Task RemoveAsync(RecurringExpense recurringExpense) => Task.CompletedTask;
 }
 
 public sealed class ThrowingRepositoryWebApplicationFactory : WebApplicationFactory<Program>
@@ -299,5 +317,8 @@ internal sealed class ThrowingRecurringExpenseRepository : IRecurringExpenseRepo
         throw new NotImplementedException();
 
     public Task UpdateAsync(RecurringExpense recurringExpense) =>
+        throw new NotImplementedException();
+
+    public Task RemoveAsync(RecurringExpense recurringExpense) =>
         throw new NotImplementedException();
 }

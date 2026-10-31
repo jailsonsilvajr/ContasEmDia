@@ -90,3 +90,10 @@ export interface RecurringExpenseDetailResponse {
 export type UpdateRecurringExpenseRequest = Omit<CreateRecurringExpenseRequest, 'frequency'>;
 
 export type UpdateRecurringExpenseResponse = RecurringExpenseDetailResponse;
+
+export type DeleteScope = 'pending-only' | 'all';
+
+export interface DeleteRecurringExpenseResponse {
+  recurringExpenseId: string;
+  scope: DeleteScope;
+}

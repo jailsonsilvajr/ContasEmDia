@@ -3,6 +3,7 @@ using ContasEmDia.Api.Middlewares;
 using ContasEmDia.Api.Responses;
 using ContasEmDia.Application.Ports;
 using ContasEmDia.Application.UseCases.CreateRecurringExpense;
+using ContasEmDia.Application.UseCases.DeleteRecurringExpense;
 using ContasEmDia.Application.UseCases.GetMonthlyPanel;
 using ContasEmDia.Application.UseCases.GetRecurringExpenseById;
 using ContasEmDia.Application.UseCases.MarkOccurrenceAsPaid;
@@ -26,6 +27,7 @@ builder.Services.AddScoped<IMarkOccurrenceAsPaidUseCase, MarkOccurrenceAsPaidUse
 builder.Services.AddScoped<IUndoOccurrencePaymentUseCase, UndoOccurrencePaymentUseCase>();
 builder.Services.AddScoped<IGetRecurringExpenseByIdUseCase, GetRecurringExpenseByIdUseCase>();
 builder.Services.AddScoped<IUpdateRecurringExpenseUseCase, UpdateRecurringExpenseUseCase>();
+builder.Services.AddScoped<IDeleteRecurringExpenseUseCase, DeleteRecurringExpenseUseCase>();
 builder.Services.AddSingleton<ICurrentDateProvider, SystemCurrentDateProvider>();
 
 builder.Services.AddControllers();

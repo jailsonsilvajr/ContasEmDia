@@ -65,6 +65,12 @@ public sealed class RecurringExpenseConfigurations : IEntityTypeConfiguration<Re
             .HasMaxLength(1000)
             .IsRequired(false);
 
+        builder.Property<CalendarDate?>("_deletedAt")
+            .HasColumnName("DeletedAt")
+            .HasConversion(vo => vo!.GetValue(), value => new CalendarDate(value))
+            .HasColumnType("date")
+            .IsRequired(false);
+
         builder.HasMany<Occurrence>("_occurrences")
             .WithOne()
             .HasForeignKey("RecurringExpenseId")
