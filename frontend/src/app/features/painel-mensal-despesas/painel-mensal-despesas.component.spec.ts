@@ -9,6 +9,7 @@ import { routes } from '../../app.routes';
 import { formatEUR } from '../../shared/currency-format.util';
 import type {
   ApiEnvelope,
+  DeleteRecurringExpenseResponse,
   GetMonthlyPanelResponse,
   MarkOccurrenceAsPaidResponse,
   PanelOccurrenceResponse,
@@ -553,5 +554,231 @@ describe('PainelMensalDespesasComponent', () => {
     expect(navigateSpy).toHaveBeenCalled();
     const navigatedUrl = String(navigateSpy.mock.calls[0][0]);
     expect(navigatedUrl).toBe('/despesas/expense-1/editar');
+  });
+
+  describe('delete confirmation modal', () => {
+    it('clicking the excluir-btn opens the modal with "pendentes/vencidas" pre-selected, using recurringExpenseId as the target', () => {
+      const fixture = createAndFlush({
+        success: true,
+        data: {
+          referencePeriod: { year: 2026, month: 8 },
+          occurrences: [makeOccurrence({ id: 'occurrence-1', recurringExpenseId: 'expense-1' })],
+        },
+        errors: null,
+      });
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('[data-testid="delete-confirm-overlay"]')).toBeFalsy();
+
+      (compiled.querySelector('[data-testid="excluir-btn"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(compiled.querySelector('[data-testid="delete-confirm-overlay"]')).toBeTruthy();
+      expect((compiled.querySelector('[data-testid="scope-pending-only-radio"]') as HTMLInputElement).checked).toBe(true);
+      expect((compiled.querySelector('[data-testid="scope-all-radio"]') as HTMLInputElement).checked).toBe(false);
+
+      httpMock.expectNone(() => true);
+    });
+
+    it('changing the scope selection to "excluir todo o histórico" updates the checked radio', () => {
+      const fixture = createAndFlush({
+        success: true,
+        data: {
+          referencePeriod: { year: 2026, month: 8 },
+          occurrences: [makeOccurrence({ id: '1', recurringExpenseId: 'expense-1' })],
+        },
+        errors: null,
+      });
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      (compiled.querySelector('[data-testid="excluir-btn"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      (compiled.querySelector('[data-testid="scope-all-radio"]') as HTMLInputElement).dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect((compiled.querySelector('[data-testid="scope-all-radio"]') as HTMLInputElement).checked).toBe(true);
+      expect((compiled.querySelector('[data-testid="scope-pending-only-radio"]') as HTMLInputElement).checked).toBe(false);
+    });
+
+    it('clicking cancelar closes the modal without any HTTP request and without changing the list', () => {
+      const fixture = createAndFlush({
+        success: true,
+        data: {
+          referencePeriod: { year: 2026, month: 8 },
+          occurrences: [makeOccurrence({ id: '1', recurringExpenseId: 'expense-1' })],
+        },
+        errors: null,
+      });
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      (compiled.querySelector('[data-testid="excluir-btn"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      (compiled.querySelector('[data-testid="cancelar-excluir-btn"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(compiled.querySelector('[data-testid="delete-confirm-overlay"]')).toBeFalsy();
+      expect(compiled.querySelectorAll('[data-testid="occurrence-row"]').length).toBe(1);
+      httpMock.expectNone(() => true);
+    });
+
+    it('confirming with the default scope DELETEs with scope=pending-only, disables the confirm button while in flight, and reloads the panel on success', () => {
+      const fixture = createAndFlush({
+        success: true,
+        data: {
+          referencePeriod: { year: 2026, month: 8 },
+          occurrences: [makeOccurrence({ id: '1', recurringExpenseId: 'expense-1' })],
+        },
+        errors: null,
+      });
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      (compiled.querySelector('[data-testid="excluir-btn"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      (compiled.querySelector('[data-testid="confirmar-excluir-btn"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      const confirmBtn = compiled.querySelector('[data-testid="confirmar-excluir-btn"]') as HTMLButtonElement;
+      expect(confirmBtn.disabled).toBe(true);
+      expect(confirmBtn.textContent).toContain('Excluindo');
+
+      const deleteReq = httpMock.expectOne((r) => r.url === '/api/v1/recurring-expenses/expense-1');
+      expect(deleteReq.request.method).toBe('DELETE');
+      expect(deleteReq.request.params.get('scope')).toBe('pending-only');
+
+      const response: ApiEnvelope<DeleteRecurringExpenseResponse> = {
+        success: true,
+        data: { recurringExpenseId: 'expense-1', scope: 'pending-only' },
+        errors: null,
+      };
+      deleteReq.flush(response);
+
+      const reloadReq = httpMock.expectOne((r) => r.url === '/api/v1/occurrences');
+      reloadReq.flush({
+        success: true,
+        data: { referencePeriod: { year: 2026, month: 8 }, occurrences: [] },
+        errors: null,
+      });
+      fixture.detectChanges();
+
+      expect(compiled.querySelector('[data-testid="delete-confirm-overlay"]')).toBeFalsy();
+    });
+
+    it('switching to "excluir todo o histórico" and confirming DELETEs with scope=all and reloads the panel on success', () => {
+      const fixture = createAndFlush({
+        success: true,
+        data: {
+          referencePeriod: { year: 2026, month: 8 },
+          occurrences: [makeOccurrence({ id: '1', recurringExpenseId: 'expense-1' })],
+        },
+        errors: null,
+      });
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      (compiled.querySelector('[data-testid="excluir-btn"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      (compiled.querySelector('[data-testid="scope-all-radio"]') as HTMLInputElement).dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      (compiled.querySelector('[data-testid="confirmar-excluir-btn"]') as HTMLButtonElement).click();
+
+      const deleteReq = httpMock.expectOne((r) => r.url === '/api/v1/recurring-expenses/expense-1');
+      expect(deleteReq.request.params.get('scope')).toBe('all');
+
+      deleteReq.flush({
+        success: true,
+        data: { recurringExpenseId: 'expense-1', scope: 'all' },
+        errors: null,
+      } satisfies ApiEnvelope<DeleteRecurringExpenseResponse>);
+
+      const reloadReq = httpMock.expectOne((r) => r.url === '/api/v1/occurrences');
+      reloadReq.flush({
+        success: true,
+        data: { referencePeriod: { year: 2026, month: 8 }, occurrences: [] },
+        errors: null,
+      });
+      fixture.detectChanges();
+
+      expect(compiled.querySelector('[data-testid="delete-confirm-overlay"]')).toBeFalsy();
+    });
+
+    it('a network/5xx failure keeps the modal open with an error message and the selected scope preserved', () => {
+      const fixture = createAndFlush({
+        success: true,
+        data: {
+          referencePeriod: { year: 2026, month: 8 },
+          occurrences: [makeOccurrence({ id: '1', recurringExpenseId: 'expense-1' })],
+        },
+        errors: null,
+      });
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      (compiled.querySelector('[data-testid="excluir-btn"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      (compiled.querySelector('[data-testid="scope-all-radio"]') as HTMLInputElement).dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      (compiled.querySelector('[data-testid="confirmar-excluir-btn"]') as HTMLButtonElement).click();
+
+      const deleteReq = httpMock.expectOne((r) => r.url === '/api/v1/recurring-expenses/expense-1');
+      deleteReq.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+      fixture.detectChanges();
+
+      expect(compiled.querySelector('[data-testid="delete-confirm-overlay"]')).toBeTruthy();
+      expect(compiled.querySelector('[data-testid="delete-error-banner"]')).toBeTruthy();
+      expect((compiled.querySelector('[data-testid="scope-all-radio"]') as HTMLInputElement).checked).toBe(true);
+
+      const confirmBtn = compiled.querySelector('[data-testid="confirmar-excluir-btn"]') as HTMLButtonElement;
+      expect(confirmBtn.disabled).toBe(false);
+
+      (compiled.querySelector('[data-testid="confirmar-excluir-btn"]') as HTMLButtonElement).click();
+      const retryReq = httpMock.expectOne((r) => r.url === '/api/v1/recurring-expenses/expense-1');
+      retryReq.flush({
+        success: true,
+        data: { recurringExpenseId: 'expense-1', scope: 'all' },
+        errors: null,
+      } satisfies ApiEnvelope<DeleteRecurringExpenseResponse>);
+
+      httpMock.expectOne((r) => r.url === '/api/v1/occurrences').flush({
+        success: true,
+        data: { referencePeriod: { year: 2026, month: 8 }, occurrences: [] },
+        errors: null,
+      });
+    });
+
+    it('a 404 on delete follows the success path: closes the modal and reloads the panel without an error message', () => {
+      const fixture = createAndFlush({
+        success: true,
+        data: {
+          referencePeriod: { year: 2026, month: 8 },
+          occurrences: [makeOccurrence({ id: '1', recurringExpenseId: 'expense-1' })],
+        },
+        errors: null,
+      });
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      (compiled.querySelector('[data-testid="excluir-btn"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      (compiled.querySelector('[data-testid="confirmar-excluir-btn"]') as HTMLButtonElement).click();
+
+      const deleteReq = httpMock.expectOne((r) => r.url === '/api/v1/recurring-expenses/expense-1');
+      deleteReq.flush({ success: false, data: null, errors: null }, { status: 404, statusText: 'Not Found' });
+
+      const reloadReq = httpMock.expectOne((r) => r.url === '/api/v1/occurrences');
+      reloadReq.flush({
+        success: true,
+        data: { referencePeriod: { year: 2026, month: 8 }, occurrences: [] },
+        errors: null,
+      });
+      fixture.detectChanges();
+
+      expect(compiled.querySelector('[data-testid="delete-confirm-overlay"]')).toBeFalsy();
+      expect(compiled.querySelector('[data-testid="delete-error-banner"]')).toBeFalsy();
+    });
   });
 });

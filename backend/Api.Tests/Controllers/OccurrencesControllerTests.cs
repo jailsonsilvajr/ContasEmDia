@@ -328,6 +328,12 @@ internal sealed class SeededRecurringExpenseRepository : IRecurringExpenseReposi
     }
 
     public Task UpdateAsync(RecurringExpense recurringExpense) => Task.CompletedTask;
+
+    public Task RemoveAsync(RecurringExpense recurringExpense)
+    {
+        _store.Remove(recurringExpense);
+        return Task.CompletedTask;
+    }
 }
 
 public sealed class OccurrencesThrowingWebApplicationFactory : WebApplicationFactory<Program>
@@ -425,5 +431,8 @@ internal sealed class OccurrencesThrowingRecurringExpenseRepository : IRecurring
         throw new InvalidOperationException("Simulated persistence failure for testing the 500 safety net.");
 
     public Task UpdateAsync(RecurringExpense recurringExpense) =>
+        throw new InvalidOperationException("Simulated persistence failure for testing the 500 safety net.");
+
+    public Task RemoveAsync(RecurringExpense recurringExpense) =>
         throw new InvalidOperationException("Simulated persistence failure for testing the 500 safety net.");
 }

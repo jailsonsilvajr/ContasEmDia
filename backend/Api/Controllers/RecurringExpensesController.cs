@@ -2,6 +2,7 @@ using ContasEmDia.Api.Mappings;
 using ContasEmDia.Api.Requests;
 using ContasEmDia.Api.Responses;
 using ContasEmDia.Application.UseCases.CreateRecurringExpense;
+using ContasEmDia.Application.UseCases.DeleteRecurringExpense;
 using ContasEmDia.Application.UseCases.GetRecurringExpenseById;
 using ContasEmDia.Application.UseCases.UpdateRecurringExpense;
 using Microsoft.AspNetCore.Mvc;
@@ -15,15 +16,18 @@ public sealed class RecurringExpensesController : ControllerBase
     private readonly ICreateRecurringExpenseUseCase _createRecurringExpenseUseCase;
     private readonly IGetRecurringExpenseByIdUseCase _getRecurringExpenseByIdUseCase;
     private readonly IUpdateRecurringExpenseUseCase _updateRecurringExpenseUseCase;
+    private readonly IDeleteRecurringExpenseUseCase _deleteRecurringExpenseUseCase;
 
     public RecurringExpensesController(
         ICreateRecurringExpenseUseCase createRecurringExpenseUseCase,
         IGetRecurringExpenseByIdUseCase getRecurringExpenseByIdUseCase,
-        IUpdateRecurringExpenseUseCase updateRecurringExpenseUseCase)
+        IUpdateRecurringExpenseUseCase updateRecurringExpenseUseCase,
+        IDeleteRecurringExpenseUseCase deleteRecurringExpenseUseCase)
     {
         _createRecurringExpenseUseCase = createRecurringExpenseUseCase;
         _getRecurringExpenseByIdUseCase = getRecurringExpenseByIdUseCase;
         _updateRecurringExpenseUseCase = updateRecurringExpenseUseCase;
+        _deleteRecurringExpenseUseCase = deleteRecurringExpenseUseCase;
     }
 
     [HttpPost]
@@ -68,5 +72,22 @@ public sealed class RecurringExpensesController : ControllerBase
         }
 
         return Ok(ApiResponse<RecurringExpenseDataResponse>.Success(output.RecurringExpense!.ToDataResponse()));
+    }
+
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<DeleteRecurringExpenseDataResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<DeleteRecurringExpenseDataResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<DeleteRecurringExpenseDataResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse<DeleteRecurringExpenseDataResponse>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Delete(Guid id, [FromQuery] string? scope)
+    {
+        var output = await _deleteRecurringExpenseUseCase.ExecuteAsync(new DeleteRecurringExpenseUseCaseInput { Id = id, Scope = scope });
+
+        if (!output.IsSuccess)
+        {
+            return BadRequest(ApiResponse<DeleteRecurringExpenseDataResponse>.Failure(output.Errors.ToApiErrors()));
+        }
+
+        return Ok(ApiResponse<DeleteRecurringExpenseDataResponse>.Success(output.Data!.ToDataResponse()));
     }
 }

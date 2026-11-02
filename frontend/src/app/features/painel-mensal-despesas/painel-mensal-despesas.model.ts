@@ -1,7 +1,14 @@
-import { CATEGORY_COLORS, CATEGORY_OPTIONS, type ApiEnvelope, type CategoryValue } from '../despesa-recorrente/despesa-recorrente.model';
+import {
+  CATEGORY_COLORS,
+  CATEGORY_OPTIONS,
+  type ApiEnvelope,
+  type CategoryValue,
+  type DeleteRecurringExpenseResponse,
+  type DeleteScope,
+} from '../despesa-recorrente/despesa-recorrente.model';
 
 export { CATEGORY_COLORS, CATEGORY_OPTIONS };
-export type { ApiEnvelope, CategoryValue };
+export type { ApiEnvelope, CategoryValue, DeleteRecurringExpenseResponse, DeleteScope };
 
 export type DerivedStatusValue = 'Paid' | 'Overdue' | 'DueSoon' | 'Pending';
 

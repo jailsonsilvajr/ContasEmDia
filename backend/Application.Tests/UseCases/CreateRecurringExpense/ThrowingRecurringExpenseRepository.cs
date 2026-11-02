@@ -23,4 +23,7 @@ internal sealed class ThrowingRecurringExpenseRepository : IRecurringExpenseRepo
 
     public Task UpdateAsync(RecurringExpense recurringExpense) =>
         throw new InvalidOperationException("Database unavailable.");
+
+    public Task RemoveAsync(RecurringExpense recurringExpense) =>
+        throw new InvalidOperationException("Database unavailable.");
 }

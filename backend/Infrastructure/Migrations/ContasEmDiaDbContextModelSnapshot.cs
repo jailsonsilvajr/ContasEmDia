@@ -34,6 +34,10 @@ namespace ContasEmDia.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("Category");
 
+                    b.Property<DateOnly?>("_deletedAt")
+                        .HasColumnType("date")
+                        .HasColumnName("DeletedAt");
+
                     b.Property<int>("_dueDay")
                         .HasColumnType("integer")
                         .HasColumnName("DueDay");

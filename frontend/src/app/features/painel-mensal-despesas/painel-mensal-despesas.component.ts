@@ -1,13 +1,16 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 
 import { PainelMensalDespesasService } from './painel-mensal-despesas.service';
+import { DespesaRecorrenteService } from '../despesa-recorrente/despesa-recorrente.service';
 import { maskCurrencyDigits } from '../../shared/currency-mask.util';
 import { formatEUR } from '../../shared/currency-format.util';
 import {
   CATEGORY_COLORS,
   CATEGORY_OPTIONS,
   STATUS_META,
+  type DeleteScope,
   type PanelOccurrenceResponse,
   type ReferencePeriodResponse,
 } from './painel-mensal-despesas.model';
@@ -69,12 +72,29 @@ export interface PanelDisplayItem {
 })
 export class PainelMensalDespesasComponent implements OnInit {
   private readonly painelService = inject(PainelMensalDespesasService);
+  private readonly despesaRecorrenteService = inject(DespesaRecorrenteService);
 
   readonly occurrences = signal<PanelOccurrenceResponse[]>([]);
   readonly referencePeriod = signal<ReferencePeriodResponse | null>(null);
   readonly editingOccurrenceId = signal<string | null>(null);
   readonly draftValor = signal('');
   readonly draftData = signal('');
+
+  readonly deleteTargetId = signal<string | null>(null);
+  readonly deleteScope = signal<DeleteScope>('pending-only');
+  readonly isDeleting = signal(false);
+  readonly deleteErrorMessage = signal<string | null>(null);
+
+  readonly isDeleteModalOpen = computed(() => this.deleteTargetId() !== null);
+  readonly canConfirmDelete = computed(() => !this.isDeleting());
+
+  private readonly deleteModalDialog = viewChild<ElementRef<HTMLDivElement>>('deleteModalDialog');
+
+  private readonly focusDeleteModalOnOpen = effect(() => {
+    if (this.isDeleteModalOpen()) {
+      this.deleteModalDialog()?.nativeElement.focus();
+    }
+  });
 
   readonly monthLabel = computed(() => {
     const period = this.referencePeriod();
@@ -206,6 +226,56 @@ export class PainelMensalDespesasComponent implements OnInit {
 
   onDraftDataInput(event: Event): void {
     this.draftData.set((event.target as HTMLInputElement).value);
+  }
+
+  onExcluirClick(recurringExpenseId: string): void {
+    this.deleteTargetId.set(recurringExpenseId);
+    this.deleteScope.set('pending-only');
+    this.deleteErrorMessage.set(null);
+  }
+
+  onCancelarExclusao(): void {
+    this.deleteTargetId.set(null);
+    this.deleteErrorMessage.set(null);
+  }
+
+  onDeleteScopeChange(scope: DeleteScope): void {
+    this.deleteScope.set(scope);
+    this.deleteErrorMessage.set(null);
+  }
+
+  onConfirmarExcluir(): void {
+    if (!this.canConfirmDelete()) return;
+
+    const targetId = this.deleteTargetId();
+    if (!targetId) return;
+
+    this.isDeleting.set(true);
+    this.despesaRecorrenteService.delete(targetId, this.deleteScope()).subscribe({
+      next: () => {
+        this.isDeleting.set(false);
+        this.deleteTargetId.set(null);
+        this.recarregarPainelAtual();
+      },
+      error: (error: unknown) => {
+        this.isDeleting.set(false);
+        if (error instanceof HttpErrorResponse && error.status === 404) {
+          this.deleteTargetId.set(null);
+          this.recarregarPainelAtual();
+          return;
+        }
+        this.deleteErrorMessage.set('Não foi possível excluir esta despesa. Tente novamente.');
+      },
+    });
+  }
+
+  private recarregarPainelAtual(): void {
+    const period = this.referencePeriod();
+    if (period) {
+      this.loadPeriod({ year: period.year, month: period.month });
+    } else {
+      this.load();
+    }
   }
 
   private replaceOccurrence(updated: PanelOccurrenceResponse): void {

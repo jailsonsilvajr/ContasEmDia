@@ -26,14 +26,18 @@ public sealed class ExceptionHandlingMiddlewareTests : IClassFixture<ThrowingRep
     [Fact]
     public async Task Post_WhenPersistenceThrows_Returns500WithGenericEnvelopeAndNoExceptionDetails()
     {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var startDate = new DateOnly(today.Year, today.Month, 1);
+        var endDate = startDate.AddMonths(1).AddDays(-1);
+
         var payload = new
         {
             name = "Aluguel",
             category = "Housing",
             monthlyAmount = 1850.00m,
             dueDay = 10,
-            startDate = "2026-09-01",
-            endDate = "2026-09-30",
+            startDate = startDate.ToString("yyyy-MM-dd"),
+            endDate = endDate.ToString("yyyy-MM-dd"),
             frequency = "Monthly",
             status = "Active",
             note = (string?)null
@@ -72,19 +76,39 @@ public sealed class ExceptionHandlingMiddlewareTests : IClassFixture<ThrowingRep
     [Fact]
     public async Task Put_WhenPersistenceThrows_Returns500WithGenericEnvelopeAndNoExceptionDetails()
     {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var startDate = new DateOnly(today.Year, today.Month, 1);
+        var endDate = startDate.AddMonths(1).AddDays(-1);
+
         var payload = new
         {
             name = "Aluguel",
             category = "Housing",
             monthlyAmount = 1850.00m,
             dueDay = 10,
-            startDate = "2026-09-01",
-            endDate = "2026-09-30",
+            startDate = startDate.ToString("yyyy-MM-dd"),
+            endDate = endDate.ToString("yyyy-MM-dd"),
             status = "Active",
             note = (string?)null
         };
 
         var response = await _client.PutAsJsonAsync($"/api/v1/recurring-expenses/{Guid.NewGuid()}", payload);
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var root = JsonDocument.Parse(body).RootElement;
+
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("data").ValueKind);
+        Assert.Single(root.GetProperty("errors").EnumerateArray());
+        Assert.DoesNotContain("StackTrace", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Delete_WhenPersistenceThrows_Returns500WithGenericEnvelopeAndNoExceptionDetails()
+    {
+        var response = await _client.DeleteAsync($"/api/v1/recurring-expenses/{Guid.NewGuid()}?scope=all");
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
 
@@ -252,6 +276,8 @@ internal sealed class SingleExpenseRecurringExpenseRepository : IRecurringExpens
     public Task<RecurringExpense?> GetByOccurrenceIdAsync(Guid occurrenceId) => Task.FromResult(_recurringExpense);
 
     public Task UpdateAsync(RecurringExpense recurringExpense) => Task.CompletedTask;
+
+    public Task RemoveAsync(RecurringExpense recurringExpense) => Task.CompletedTask;
 }
 
 public sealed class ThrowingRepositoryWebApplicationFactory : WebApplicationFactory<Program>
@@ -299,5 +325,8 @@ internal sealed class ThrowingRecurringExpenseRepository : IRecurringExpenseRepo
         throw new NotImplementedException();
 
     public Task UpdateAsync(RecurringExpense recurringExpense) =>
+        throw new NotImplementedException();
+
+    public Task RemoveAsync(RecurringExpense recurringExpense) =>
         throw new NotImplementedException();
 }

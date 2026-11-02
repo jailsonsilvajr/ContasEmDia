@@ -16,6 +16,7 @@ public sealed class RecurringExpense
     private RecurringExpenseStatus _status;
     private Note _note;
     private readonly List<Occurrence> _occurrences = [];
+    private CalendarDate? _deletedAt;
 
     public RecurringExpense(
         ExpenseName name,
@@ -91,6 +92,10 @@ public sealed class RecurringExpense
     public Note GetNote() => _note;
 
     public IReadOnlyCollection<Occurrence> GetOccurrences() => _occurrences;
+
+    public bool IsDeleted() => _deletedAt is not null;
+
+    public CalendarDate? GetDeletedAt() => _deletedAt;
 
     public IReadOnlyCollection<Occurrence> GetOccurrencesForPeriod(ReferencePeriod referencePeriod) =>
         _occurrences
@@ -211,6 +216,11 @@ public sealed class RecurringExpense
 
     private void GenerateOccurrenceForPeriodIfMissing(ReferencePeriod period)
     {
+        if (_deletedAt is not null)
+        {
+            return;
+        }
+
         if (GetOccurrencesForPeriod(period).Count == 0)
         {
             var daysInMonth = DateTime.DaysInMonth(period.Year, period.Month);
@@ -248,5 +258,11 @@ public sealed class RecurringExpense
         var occurrence = FindOccurrence(occurrenceId) ?? throw new KeyNotFoundException("Ocorrência não encontrada.");
 
         occurrence.UndoPayment();
+    }
+
+    public void DeleteKeepingPaidHistory(CalendarDate currentDate)
+    {
+        _occurrences.RemoveAll(occurrence => occurrence.GetStatus().GetValue() != OccurrenceStatusType.Paid);
+        _deletedAt = currentDate;
     }
 }

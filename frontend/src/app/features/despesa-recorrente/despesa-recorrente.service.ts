@@ -1,11 +1,13 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
 import type {
   ApiEnvelope,
   CreateRecurringExpenseRequest,
   CreateRecurringExpenseResponse,
+  DeleteRecurringExpenseResponse,
+  DeleteScope,
   RecurringExpenseDetailResponse,
   UpdateRecurringExpenseRequest,
   UpdateRecurringExpenseResponse,
@@ -25,5 +27,10 @@ export class DespesaRecorrenteService {
 
   update(id: string, payload: UpdateRecurringExpenseRequest): Observable<ApiEnvelope<UpdateRecurringExpenseResponse>> {
     return this.http.put<ApiEnvelope<UpdateRecurringExpenseResponse>>(`/api/v1/recurring-expenses/${id}`, payload);
+  }
+
+  delete(id: string, scope: DeleteScope): Observable<ApiEnvelope<DeleteRecurringExpenseResponse>> {
+    const params = new HttpParams().set('scope', scope);
+    return this.http.delete<ApiEnvelope<DeleteRecurringExpenseResponse>>(`/api/v1/recurring-expenses/${id}`, { params });
   }
 }

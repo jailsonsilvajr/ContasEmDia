@@ -606,4 +606,85 @@ public class RecurringExpenseTests
         Assert.Equal(occurrenceCountBefore, expense.GetOccurrences().Count);
         Assert.Equal(OccurrenceStatusType.Paid, mayOccurrence.GetStatus().GetValue());
     }
+
+    [Fact]
+    public void DeleteKeepingPaidHistory_ExpenseWithPaidAndPendingOccurrences_RemovesOnlyNonPaidAndMarksDeleted()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 3, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+        Assert.Equal(3, expense.GetOccurrences().Count); // Jan, Feb, Mar
+        var paidOccurrence = expense.GetOccurrencesForPeriod(new ReferencePeriod(2026, 1)).Single();
+        expense.MarkOccurrenceAsPaid(paidOccurrence.GetId(), new Money(1500m), new CalendarDate(new DateOnly(2026, 1, 5)));
+
+        Assert.False(expense.IsDeleted());
+
+        expense.DeleteKeepingPaidHistory(new CalendarDate(new DateOnly(2026, 3, 15)));
+
+        Assert.True(expense.IsDeleted());
+        Assert.Equal(new DateOnly(2026, 3, 15), expense.GetDeletedAt()!.GetValue());
+        var remaining = Assert.Single(expense.GetOccurrences());
+        Assert.Equal(paidOccurrence.GetId(), remaining.GetId());
+        Assert.Equal(OccurrenceStatusType.Paid, remaining.GetStatus().GetValue());
+    }
+
+    [Fact]
+    public void DeleteKeepingPaidHistory_ExpenseWithZeroOccurrences_MarksDeletedAndRemovesNothing()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 9, 1),
+            currentReferencePeriod: new ReferencePeriod(2026, 8));
+        Assert.Empty(expense.GetOccurrences());
+
+        expense.DeleteKeepingPaidHistory(new CalendarDate(new DateOnly(2026, 8, 15)));
+
+        Assert.True(expense.IsDeleted());
+        Assert.Empty(expense.GetOccurrences());
+    }
+
+    [Fact]
+    public void DeleteKeepingPaidHistory_ExpenseWithOnlyPaidOccurrences_MarksDeletedAndRemovesNothing()
+    {
+        var expense = CreateExpense(currentReferencePeriod: new ReferencePeriod(2026, 8));
+        var occurrence = expense.GetOccurrences().Single();
+        expense.MarkOccurrenceAsPaid(occurrence.GetId(), new Money(1500m), new CalendarDate(new DateOnly(2026, 8, 5)));
+
+        expense.DeleteKeepingPaidHistory(new CalendarDate(new DateOnly(2026, 8, 15)));
+
+        Assert.True(expense.IsDeleted());
+        Assert.Single(expense.GetOccurrences());
+    }
+
+    [Fact]
+    public void ChangeEndDate_ExtendingAfterDeleteKeepingPaidHistory_GeneratesNoNewOccurrenceAndDoesNotThrow()
+    {
+        var expense = CreateExpense(
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 1, 31),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+        expense.DeleteKeepingPaidHistory(new CalendarDate(new DateOnly(2026, 1, 15)));
+
+        expense.ChangeEndDate(new CalendarDate(new DateOnly(2026, 6, 1)), new ReferencePeriod(2026, 1));
+
+        Assert.Equal(new DateOnly(2026, 6, 1), expense.GetEndDate().GetValue());
+        Assert.Empty(expense.GetOccurrences());
+    }
+
+    [Fact]
+    public void Reactivate_AfterDeleteKeepingPaidHistory_GeneratesNoNewOccurrenceAndDoesNotThrow()
+    {
+        var expense = CreateExpense(
+            status: RecurringExpenseStatusType.Active,
+            startDate: new DateOnly(2026, 1, 1),
+            endDate: new DateOnly(2026, 1, 31),
+            currentReferencePeriod: new ReferencePeriod(2026, 1));
+        expense.Pause();
+        expense.DeleteKeepingPaidHistory(new CalendarDate(new DateOnly(2026, 1, 15)));
+
+        expense.Reactivate(new ReferencePeriod(2026, 1));
+
+        Assert.Equal(RecurringExpenseStatusType.Active, expense.GetStatus().GetValue());
+        Assert.Empty(expense.GetOccurrences());
+    }
 }

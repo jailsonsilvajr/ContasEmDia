@@ -16,4 +16,6 @@ public interface IRecurringExpenseRepository
     Task<RecurringExpense?> GetByOccurrenceIdAsync(Guid occurrenceId);
 
     Task UpdateAsync(RecurringExpense recurringExpense);
+
+    Task RemoveAsync(RecurringExpense recurringExpense);
 }
