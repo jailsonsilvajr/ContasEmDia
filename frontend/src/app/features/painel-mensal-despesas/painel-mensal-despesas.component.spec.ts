@@ -421,7 +421,7 @@ describe('PainelMensalDespesasComponent', () => {
     });
     fixture.detectChanges();
 
-    expect(compiled.querySelector('[data-testid="mes-atual-label"]')?.textContent).toContain('Setembro 2026');
+    expect(compiled.querySelector('[data-testid="mes-atual-label"]')?.textContent).toContain('Set 2026');
   });
 
   it('clicking "mês anterior" reloads with the previous month in the same year', () => {
@@ -514,7 +514,7 @@ describe('PainelMensalDespesasComponent', () => {
     });
     fixture.detectChanges();
 
-    expect(compiled.querySelector('[data-testid="mes-atual-label"]')?.textContent).toContain('Agosto 2026');
+    expect(compiled.querySelector('[data-testid="mes-atual-label"]')?.textContent).toContain('Ago 2026');
   });
 
   it('the "Nova despesa" button is associated with routerLink="/despesas/nova"', () => {
