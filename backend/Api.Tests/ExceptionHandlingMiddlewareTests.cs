@@ -26,14 +26,18 @@ public sealed class ExceptionHandlingMiddlewareTests : IClassFixture<ThrowingRep
     [Fact]
     public async Task Post_WhenPersistenceThrows_Returns500WithGenericEnvelopeAndNoExceptionDetails()
     {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var startDate = new DateOnly(today.Year, today.Month, 1);
+        var endDate = startDate.AddMonths(1).AddDays(-1);
+
         var payload = new
         {
             name = "Aluguel",
             category = "Housing",
             monthlyAmount = 1850.00m,
             dueDay = 10,
-            startDate = "2026-09-01",
-            endDate = "2026-09-30",
+            startDate = startDate.ToString("yyyy-MM-dd"),
+            endDate = endDate.ToString("yyyy-MM-dd"),
             frequency = "Monthly",
             status = "Active",
             note = (string?)null
@@ -72,14 +76,18 @@ public sealed class ExceptionHandlingMiddlewareTests : IClassFixture<ThrowingRep
     [Fact]
     public async Task Put_WhenPersistenceThrows_Returns500WithGenericEnvelopeAndNoExceptionDetails()
     {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var startDate = new DateOnly(today.Year, today.Month, 1);
+        var endDate = startDate.AddMonths(1).AddDays(-1);
+
         var payload = new
         {
             name = "Aluguel",
             category = "Housing",
             monthlyAmount = 1850.00m,
             dueDay = 10,
-            startDate = "2026-09-01",
-            endDate = "2026-09-30",
+            startDate = startDate.ToString("yyyy-MM-dd"),
+            endDate = endDate.ToString("yyyy-MM-dd"),
             status = "Active",
             note = (string?)null
         };
