@@ -99,7 +99,7 @@ export class PainelMensalDespesasComponent implements OnInit {
   readonly monthLabel = computed(() => {
     const period = this.referencePeriod();
     if (!period) return '';
-    return `${MONTH_NAMES[period.month - 1]} ${period.year}`;
+    return `${MONTH_NAMES[period.month - 1].slice(0, 3)} ${period.year}`;
   });
 
   readonly displayItems = computed<PanelDisplayItem[]>(() => {
